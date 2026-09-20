@@ -17,18 +17,22 @@
     --ok: #2b8a3e;
     --err: #c92a2a;
     --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+    /* 分类标签颜色：模型 紫 / 产品 蓝 / 行业 绿 / 论文 玫红 / 技巧 琥珀（避开强调色的橙） */
+    --cat-models: #6d3fc4; --cat-products: #1c62c4; --cat-industry: #217a3c; --cat-paper: #b82d6b; --cat-tip: #8a5a00;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --bg: #141413; --surface: #1d1d1b; --surface-2: #262623; --text: #ecebe6;
       --muted: #9a978d; --line: #30302c; --accent: #ff8a4c; --accent-soft: #33200f;
       --ok: #69db7c; --err: #ff8787; --shadow: none;
+      --cat-models: #b79cf5; --cat-products: #7fb0ff; --cat-industry: #7bd18f; --cat-paper: #f58cb8; --cat-tip: #e6b85c;
     }
   }
   :root[data-theme="dark"] {
     --bg: #141413; --surface: #1d1d1b; --surface-2: #262623; --text: #ecebe6;
     --muted: #9a978d; --line: #30302c; --accent: #ff8a4c; --accent-soft: #33200f;
     --ok: #69db7c; --err: #ff8787; --shadow: none;
+      --cat-models: #b79cf5; --cat-products: #7fb0ff; --cat-industry: #7bd18f; --cat-paper: #f58cb8; --cat-tip: #e6b85c;
   }
 
   * { box-sizing: border-box; }
@@ -90,6 +94,12 @@
   @keyframes flash { from { background: var(--accent-soft); } to { background: var(--surface); } }
   .meta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 12.5px; color: var(--muted); padding-right: 44px; }
   .chip { background: var(--surface-2); color: var(--text); border-radius: 6px; padding: 0 7px; font-size: 12px; line-height: 20px; }
+  .chip[data-cat] { background: color-mix(in srgb, var(--c, var(--muted)) 14%, transparent); color: var(--c, var(--text)); font-weight: 600; }
+  .chip[data-cat="ai-models"] { --c: var(--cat-models); }
+  .chip[data-cat="ai-products"] { --c: var(--cat-products); }
+  .chip[data-cat="industry"] { --c: var(--cat-industry); }
+  .chip[data-cat="paper"] { --c: var(--cat-paper); }
+  .chip[data-cat="tip"] { --c: var(--cat-tip); }
   .chip.star { background: var(--accent-soft); color: var(--accent); }
   .card h2 { margin: 6px 0 6px; font-size: 16.5px; line-height: 1.45; font-weight: 650; }
   .card p { margin: 0; color: color-mix(in srgb, var(--text) 86%, var(--muted)); }
@@ -528,7 +538,7 @@
   function card(it) {
     const links = it.links || {};
     const meta = el('div', { class: 'meta' },
-      it.category ? el('span', { class: 'chip', text: CATEGORIES[it.category] || it.category }) : null,
+      it.category ? el('span', { class: 'chip', 'data-cat': it.category, text: CATEGORIES[it.category] || it.category }) : null,
       it.selected && state.mode === 'all' ? el('span', { class: 'chip star', text: '精选' }) : null,
       state.hotRank.has(it.id) ? el('span', { class: 'chip onhot', text: '热点榜第 ' + state.hotRank.get(it.id), title: '这条资讯所属事件正在当前热点榜上' }) : null,
       el('span', { text: (it.source && it.source.name) || '' }),
