@@ -134,6 +134,56 @@
   .mv.new { color: #fff; background: var(--accent); }
   .heat { height: 4px; border-radius: 2px; background: var(--surface-2); margin-top: 7px; overflow: hidden; }
   .heat i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, transparent), var(--accent)); }
+  /* Tibo 重置日历卡片：左边是选中日期的预告/记录，右边是月历；高度约等于两张资讯卡片 */
+  .tibo { border-color: color-mix(in srgb, var(--cat-tip) 45%, var(--line)); background: linear-gradient(180deg, color-mix(in srgb, var(--cat-tip) 7%, var(--surface)), var(--surface) 70%); }
+  .tibo-head { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--cat-tip); margin-bottom: 10px; }
+  .tibo-head .sp { margin-left: auto; font-weight: 400; color: var(--muted); font-size: 12px; }
+  .tibo-head .sp a, .tibo-head .sp button { border: 0; background: none; padding: 0; color: inherit; cursor: pointer; border-bottom: 1px dotted currentColor; font-size: 12px; }
+  .tibo-grid { display: grid; grid-template-columns: minmax(0, 1fr) 294px; gap: 20px; align-items: start; }
+  .tibo-info { max-height: 312px; overflow-y: auto; scrollbar-width: thin; }
+  .tibo-eyebrow { font-size: 12.5px; color: var(--muted); }
+  .tibo-date { font-size: 28px; font-weight: 800; line-height: 1.25; letter-spacing: .01em; }
+  .tibo-date small { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 8px; }
+  .tibo-count { display: inline-block; margin-top: 4px; padding: 1px 9px; border-radius: 10px; font-size: 12.5px; font-weight: 700; color: #fff; background: var(--accent); }
+  .tibo-ev { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+  .tibo-ev h4 { margin: 6px 0 2px; font-size: 15px; line-height: 1.4; }
+  .tibo-ev .when { font-size: 13px; color: var(--cat-products); }
+  .tibo-ev .scope { font-size: 12.5px; color: var(--muted); }
+  .tibo-post { margin: 8px 0 0; padding: 8px 10px; border-radius: 9px; background: var(--surface-2); font-size: 13.5px; line-height: 1.55; }
+  .tibo-post q { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; quotes: none; }
+  .tibo-post small { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 5px; color: var(--muted); font-size: 12px; }
+  .tibo-post small a { border-bottom: 1px dotted currentColor; }
+  .st { display: inline-block; border-radius: 6px; padding: 0 7px; font-size: 12px; line-height: 20px; font-weight: 600; margin-right: 6px; }
+  .st.announced { color: var(--cat-tip); background: color-mix(in srgb, var(--cat-tip) 16%, transparent); }
+  .st.confirmed { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+  .st.kind { color: var(--text); background: var(--surface-2); }
+  .cal-head { display: flex; align-items: center; font-weight: 700; font-size: 14px; }
+  .cal-head span { margin-right: auto; }
+  .cal-head button { border: 0; background: none; width: 28px; height: 26px; border-radius: 7px; cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; }
+  .cal-head button:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+  .cal-head button:disabled { opacity: .3; cursor: default; }
+  .cal-sum { font-size: 11.5px; color: var(--muted); margin: 1px 0 5px; min-height: 17px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-grid .wd { text-align: center; font-size: 11px; color: var(--muted); padding-bottom: 2px; }
+  .day { height: 36px; padding: 0; border: 1.5px solid transparent; border-radius: 8px; background: color-mix(in srgb, var(--surface-2) 55%, transparent); color: var(--text); font: inherit; font-size: 12.5px; line-height: 1.1; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .day.blank { background: none; }
+  .day i { font-style: normal; font-size: 9px; font-weight: 600; margin-top: 2px; }
+  button.day { cursor: pointer; }
+  button.day:hover { border-color: var(--line); }
+  .day.confirmed { background: color-mix(in srgb, var(--ok) 15%, transparent); }
+  .day.confirmed i { color: var(--ok); }
+  .day.announced { background: color-mix(in srgb, var(--cat-tip) 18%, transparent); }
+  .day.announced i { color: var(--cat-tip); }
+  .day.today b { font-weight: 800; text-decoration: underline; text-underline-offset: 2px; }
+  .day b { font-weight: 500; }
+  .day.sel { border-color: var(--accent); }
+  .cal-legend { margin-top: 6px; font-size: 11px; color: var(--muted); display: flex; gap: 12px; }
+  .cal-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+  @media (max-width: 860px) {
+    .tibo-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .tibo-info { max-height: none; }
+    .day { height: 40px; }
+  }
   .chip.onhot { background: var(--accent); color: #fff; font-weight: 600; }
 
   /* 滚动播报：固定高度的视窗，内容由脚本匀速上移，首尾用一份克隆无缝衔接 */
@@ -334,6 +384,8 @@
     feedUrl: '', feedEtag: null, hotEtag: null,
     known: null,          // 当前查询下已见过的条目 id；null 表示还没有基线
     fresh: new Set(),     // 尚未标记已读的新条目
+    resets: null, resetsEtag: null,   // Tibo 重置 / 发卡日历的事件列表
+    tibo: { month: null, sel: null }, // 日历卡片当前看的月份和选中的日期；null 表示跟随默认焦点
     hotRank: new Map(),   // 条目 id → 当前热点榜名次，用来在资讯卡片上打「热点」标记
     more: 'idle', moreError: null,   // 「加载更多」的状态：idle / loading / error
     nextAt: 0, loading: false, lastChecked: 0, error: null,
@@ -460,6 +512,16 @@
     } finally { state.autoLoading = false; renderEnd(); }
   }
 
+  async function loadResets() {
+    const r = await api('/codex-resets', null, state.resetsEtag);
+    if (r.notModified) return;
+    state.resetsEtag = r.etag;
+    // 事件挂在哪一天：实际发生日 > 预计范围的起始日 > 确认时间 > 发帖时间。接口给的都是 +08:00 的北京时间，直接取日期部分
+    state.resets = (r.data.events || []).map(e => ({ ...e, day: e.occurredOn || ((e.schedule && e.schedule.from) || e.confirmedAt || e.createdAt || '').slice(0, 10) })).filter(e => /^\d{4}-\d\d-\d\d$/.test(e.day));
+    state.tibo = { month: null, sel: null };
+    if (state.items.length) renderFeed();
+  }
+
   async function loadHot() {
     const r = await api('/hot-topics', null, state.hotEtag);
     if (r.notModified) return;
@@ -475,7 +537,7 @@
     if (state.loading) { state.again = true; return; }
     state.loading = true; state.again = false; renderStatus();
     let retryAfter = 0;
-    const results = await Promise.allSettled([loadFeed(), loadHot()]);
+    const results = await Promise.allSettled([loadFeed(), loadHot(), loadResets()]);
     const failed = results.find(r => r.status === 'rejected');
     if (failed) { showError(failed.reason); retryAfter = failed.reason.retryAfter || 0; }
     else { state.error = null; $('error').classList.remove('show'); }
@@ -511,7 +573,7 @@
     if (!state.items.length) {
       feed.replaceChildren(el('div', { class: 'empty', text: state.q.length >= 2 ? '没有匹配的内容' : '这个时间窗口内暂无内容' }));
     } else {
-      feed.replaceChildren(...state.items.map(card), endMarker(false));
+      feed.replaceChildren(...feedNodes(), endMarker(false));
     }
     ticker.sync();
     renderBanner();
@@ -529,7 +591,7 @@
       clone.hidden = true;
       if (!state.speed || !state.items.length) return;
       if (feed.offsetHeight <= scroller.clientHeight) return;
-      clone.replaceChildren(...state.items.map(card), endMarker(true));
+      clone.replaceChildren(...feedNodes(), endMarker(true));
       feed.querySelector('.end').replaceWith(endMarker(true));
       clone.querySelectorAll('a').forEach(a => a.setAttribute('tabindex', '-1'));
       clone.hidden = false;
@@ -590,6 +652,133 @@
     }
     return box;
   }
+  // 资讯卡片序列，外加 Tibo 日历卡片：总是排在第一位；滚动播报且有未到期的预告时每隔 25 条再插一张，
+  // 否则一轮要滚很久才露一次面。搜索 / 按分类筛选时不插，免得干扰结果
+  const TIBO_EVERY = 25;
+  function feedNodes() {
+    const cards = state.items.map(card);
+    if (!state.resets || !state.resets.length || state.q.length >= 2 || state.category) return cards;
+    const repeat = state.speed > 0 && upcomingReset();
+    const out = [];
+    cards.forEach((c, i) => { if (i === 0 || (repeat && i % TIBO_EVERY === 0)) out.push(tiboCard()); out.push(c); });
+    return out;
+  }
+
+  const bjToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Shanghai' }).format(new Date());
+  // 帖子时间统一按北京时间显示（和日历、预计时间的口径一致），不跟随访客所在时区
+  const bjTime = iso => { const t = Date.parse(iso); return isNaN(t) ? '' : new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(t); };
+  const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+  const dayLabel = d => `${+d.slice(5, 7)}月${+d.slice(8, 10)}日`;
+  const weekdayOf = d => '周' + WEEKDAYS[new Date(d + 'T00:00:00Z').getUTCDay()];
+  function upcomingReset() {
+    const now = Date.now();
+    return (state.resets || [])
+      .filter(e => e.status === 'announced' && e.schedule && Date.parse(e.schedule.through || e.schedule.from) >= now)
+      .sort((a, b) => Date.parse(a.schedule.from) - Date.parse(b.schedule.from))[0] || null;
+  }
+  function untilText(iso) {
+    const ms = Date.parse(iso) - Date.now();
+    if (isNaN(ms)) return '';
+    if (ms <= 0) return '预计时间窗口已开始';
+    const h = Math.floor(ms / 3600000), d = Math.floor(h / 24);
+    return d ? `还有 ${d} 天 ${h % 24} 小时` : h ? `还有 ${h} 小时 ${Math.floor(ms / 60000) % 60} 分钟` : `还有 ${Math.max(1, Math.floor(ms / 60000))} 分钟`;
+  }
+  // 默认焦点：有未到期预告就看它，否则看最近一次记录
+  function tiboFocus() {
+    const up = upcomingReset();
+    if (up) return up.day;
+    const today = bjToday();
+    const past = state.resets.map(e => e.day).filter(d => d <= today).sort();
+    return past.length ? past[past.length - 1] : state.resets[0].day;
+  }
+
+  function tiboCard() {
+    const events = state.resets, up = upcomingReset(), focus = tiboFocus(), today = bjToday();
+    const sel = state.tibo.sel || focus, month = state.tibo.month || sel.slice(0, 7);
+    const byDay = new Map();
+    for (const e of events) byDay.set(e.day, (byDay.get(e.day) || []).concat(e));
+
+    // ----- 左：选中日期的事件 -----
+    const dayEvents = byDay.get(sel) || [];
+    const isUp = up && up.day === sel;
+    const info = el('div', { class: 'tibo-info' },
+      el('div', { class: 'tibo-eyebrow', text: isUp ? `下一次 · ${up.label}预告` : sel > today ? '预告' : sel === focus ? '最近一次记录' : '历史记录' }),
+      el('div', { class: 'tibo-date' }, dayLabel(sel), el('small', { text: weekdayOf(sel) + (sel === today ? ' · 今天' : '') })),
+      isUp ? el('span', { class: 'tibo-count', 'data-until': up.schedule.from, text: untilText(up.schedule.from) }) : null,
+    );
+    if (!dayEvents.length) info.append(el('p', { class: 'tibo-eyebrow', style: 'margin-top:12px', text: '这一天没有重置或发卡记录。' }));
+    for (const e of dayEvents) {
+      const post = (e.posts || []).slice().sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))[0];   // 最新的一条帖子
+      info.append(el('div', { class: 'tibo-ev' },
+        el('span', { class: 'st kind', text: e.label }),
+        el('span', { class: 'st ' + (e.status === 'confirmed' ? 'confirmed' : 'announced'), text: e.status === 'confirmed' ? '已确认' : '预告' }),
+        el('h4', { text: e.title }),
+        e.schedule && e.schedule.label ? el('div', { class: 'when', text: e.schedule.label }) : null,
+        e.scope ? el('div', { class: 'scope', text: '适用：' + e.scope }) : null,
+        post ? el('div', { class: 'tibo-post' },
+          el('q', { text: post.text || post.originalText || '', title: post.originalText || null }),
+          el('small', null,
+            el('span', { text: ['Tibo', bjTime(post.publishedAt), post.stage].filter(Boolean).join(' · ') }),
+            post.url ? link(post.url, '在 X 查看原帖 ↗') : null,
+          ),
+        ) : null,
+      ));
+    }
+
+    // ----- 右：月历（固定 6 行，切月份时卡片高度不变） -----
+    const [y, m] = month.split('-').map(Number);
+    const lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;          // 周一开头
+    const daysIn = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const grid = el('div', { class: 'cal-grid' }, ...['一', '二', '三', '四', '五', '六', '日'].map(w => el('div', { class: 'wd', text: w })));
+    const sum = { direct_reset: 0, reset_credit: 0, announced: 0 };
+    for (let i = 0; i < 42; i++) {
+      const n = i - lead + 1;
+      if (n < 1 || n > daysIn) { grid.append(el('div', { class: 'day blank' })); continue; }
+      const d = `${month}-${String(n).padStart(2, '0')}`, evs = byDay.get(d);
+      const cls = 'day' + (d === today ? ' today' : '') + (d === sel ? ' sel' : '');
+      if (!evs) { grid.append(el('div', { class: cls }, el('b', { text: n }))); continue; }
+      const announced = evs.some(e => e.status !== 'confirmed');
+      for (const e of evs) { if (e.status === 'confirmed') sum[e.type] = (sum[e.type] || 0) + 1; else sum.announced++; }
+      const tag = (evs[0].type === 'reset_credit' ? '发卡' : '重置') + (evs.length > 1 ? '+' : '');
+      grid.append(el('button', { type: 'button', class: cls + (announced ? ' announced' : ' confirmed'), 'data-day': d, title: evs.map(e => e.title).join('；') },
+        el('b', { text: n }), el('i', { text: tag })));
+    }
+    const months = events.map(e => e.day.slice(0, 7)).concat(today.slice(0, 7)).sort();
+    const shift = k => { const t = new Date(Date.UTC(y, m - 1 + k, 1)); return t.toISOString().slice(0, 7); };
+    const parts = [sum.direct_reset && `${sum.direct_reset} 次全员重置`, sum.reset_credit && `${sum.reset_credit} 次发卡`, sum.announced && `${sum.announced} 条预告`].filter(Boolean);
+    const cal = el('div', { class: 'cal' },
+      el('div', { class: 'cal-head' },
+        el('span', { text: `${y} 年 ${m} 月` }),
+        el('button', { type: 'button', 'data-month': shift(-1), disabled: month <= months[0] ? '' : null, 'aria-label': '上个月', text: '‹' }),
+        el('button', { type: 'button', 'data-month': shift(1), disabled: month >= months[months.length - 1] ? '' : null, 'aria-label': '下个月', text: '›' }),
+      ),
+      el('div', { class: 'cal-sum', text: parts.length ? '本月：' + parts.join(' · ') : '本月暂无记录' }),
+      grid,
+      el('div', { class: 'cal-legend' },
+        el('span', null, el('i', { style: 'background:var(--cat-tip)' }), '预告'),
+        el('span', null, el('i', { style: 'background:var(--ok)' }), '已确认'),
+        el('span', { text: '点日期看详情' }),
+      ),
+    );
+
+    const moved = sel !== focus || month !== focus.slice(0, 7);
+    return el('article', { class: 'card tibo' },
+      el('div', { class: 'tibo-head' }, 'Tibo 重置 · 发卡日历',
+        el('span', { class: 'sp' }, moved ? el('button', { type: 'button', 'data-tibo-reset': '', text: '回到最近' }) : null)),
+      el('div', { class: 'tibo-grid' }, info, cal),
+    );
+  }
+  // 点日期 / 翻月份：改状态后把页面上所有日历卡片（含循环用的克隆）原地换新，高度基本不变，不会打乱滚动位置
+  function onTiboClick(e) {
+    const day = e.target.closest('[data-day]'), mon = e.target.closest('[data-month]'), reset = e.target.closest('[data-tibo-reset]');
+    if (!day && !mon && !reset) return false;
+    if (day) state.tibo = { sel: day.dataset.day, month: day.dataset.day.slice(0, 7) };
+    else if (mon) { if (mon.disabled) return true; state.tibo = { sel: state.tibo.sel || tiboFocus(), month: mon.dataset.month }; }
+    else state.tibo = { month: null, sel: null };
+    document.querySelectorAll('#scroller .tibo').forEach(n => n.replaceWith(tiboCard()));
+    return true;
+  }
+
   function renderEnd() {
     document.querySelectorAll('#scroller .end').forEach(n => n.replaceWith(endMarker()));
   }
@@ -809,7 +998,7 @@
   });
 
   $('refresh').addEventListener('click', refresh);
-  $('scroller').addEventListener('click', e => { if (e.target.closest('[data-more]')) loadMore(); });
+  $('scroller').addEventListener('click', e => { if (onTiboClick(e)) return; if (e.target.closest('[data-more]')) loadMore(); });
   $('banner').addEventListener('click', () => { state.fresh.clear(); renderFeed(); });
   document.addEventListener('keydown', e => {
     if (e.key.toLowerCase() === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) refresh();
@@ -829,7 +1018,10 @@
     if (state.nextAt && Date.now() >= state.nextAt && !state.loading) refresh();
     else renderStatus();
   }, 1000);
-  setInterval(() => document.querySelectorAll('[data-ago]').forEach(n => { n.textContent = ago(n.dataset.ago); }), 30000);
+  setInterval(() => {
+    document.querySelectorAll('[data-ago]').forEach(n => { n.textContent = ago(n.dataset.ago); });
+    document.querySelectorAll('[data-until]').forEach(n => { n.textContent = untilText(n.dataset.until); });
+  }, 30000);
 
   refresh();
 })();
