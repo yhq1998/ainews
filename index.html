@@ -359,7 +359,7 @@
   // ---------- 滚动播报 ----------
   const ticker = (() => {
     const scroller = $('scroller'), feed = $('feed'), clone = $('feedClone');
-    let pos = 0, last = 0, hover = false, touchUntil = 0;
+    let pos = 0, last = 0, hover = false, kbFocus = false, touchUntil = 0;
 
     // 内容比视窗高才需要循环：在末尾接一份克隆，滚过一整份后把位置减回去，视觉上无缝
     function sync() {
@@ -376,7 +376,7 @@
 
     function frame(t) {
       const dt = Math.min(100, t - last); last = t;
-      const paused = hover || Date.now() < touchUntil || scroller.contains(document.activeElement);
+      const paused = hover || kbFocus || Date.now() < touchUntil;
       if (state.speed && !clone.hidden) {
         // 用户用滚轮/触摸自己滚过：以实际位置为准接着播
         if (paused || Math.abs(scroller.scrollTop - pos) > 2) pos = scroller.scrollTop;
@@ -389,8 +389,17 @@
       requestAnimationFrame(frame);
     }
 
-    scroller.addEventListener('mouseenter', () => { hover = true; });
+    // 用 mousemove 而不只是 mouseenter：切回标签页后鼠标若仍在区域内，动一下就能重新识别为悬停
+    scroller.addEventListener('mousemove', () => { hover = true; });
     scroller.addEventListener('mouseleave', () => { hover = false; });
+    // 点链接跳到新标签页时不会触发 mouseleave，离开页面时主动清掉悬停状态，否则回来后一直停着
+    const release = () => { hover = false; };
+    addEventListener('blur', release);
+    document.addEventListener('visibilitychange', release);
+    // 只有键盘 Tab 聚焦才暂停；鼠标点击链接留下的焦点不算，并且点完立即释放
+    scroller.addEventListener('focusin', e => { kbFocus = e.target.matches(':focus-visible'); });
+    scroller.addEventListener('focusout', () => { kbFocus = false; });
+    scroller.addEventListener('click', e => { const a = e.target.closest('a'); if (a) { a.blur(); kbFocus = false; } });
     const touched = () => { touchUntil = Date.now() + 4000; };
     scroller.addEventListener('touchstart', touched, { passive: true });
     scroller.addEventListener('touchmove', touched, { passive: true });
