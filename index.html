@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>瑞泊-AI动态</title>
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --surface-2: #efede7;
+    --text: #1d1c19;
+    --muted: #6d6a62;
+    --line: #e2dfd6;
+    --accent: #d9480f;
+    --accent-soft: #fff1e8;
+    --ok: #2b8a3e;
+    --err: #c92a2a;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141413; --surface: #1d1d1b; --surface-2: #262623; --text: #ecebe6;
+      --muted: #9a978d; --line: #30302c; --accent: #ff8a4c; --accent-soft: #33200f;
+      --ok: #69db7c; --err: #ff8787; --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141413; --surface: #1d1d1b; --surface-2: #262623; --text: #ecebe6;
+    --muted: #9a978d; --line: #30302c; --accent: #ff8a4c; --accent-soft: #33200f;
+    --ok: #69db7c; --err: #ff8787; --shadow: none;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+  }
+  a { color: inherit; text-decoration: none; }
+  a:hover { color: var(--accent); }
+  button, select, input { font: inherit; color: inherit; }
+
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .bar { max-width: 1120px; margin: 0 auto; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; margin-right: auto; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.live { background: var(--ok); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent); animation: pulse 2s infinite; }
+  .dot.busy { background: var(--accent); }
+  .dot.err { background: var(--err); }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+  .status { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
+  .seg { display: inline-flex; background: var(--surface-2); border-radius: 9px; padding: 3px; }
+  .seg button { border: 0; background: none; padding: 4px 12px; border-radius: 7px; cursor: pointer; color: var(--muted); font-size: 14px; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); font-weight: 600; }
+  select, input[type="search"], .btn {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 5px 10px; font-size: 14px; height: 34px;
+  }
+  input[type="search"] { flex: 1 1 160px; min-width: 120px; outline: none; }
+  input[type="search"]:focus, select:focus { border-color: var(--accent); }
+  .btn { cursor: pointer; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:disabled { opacity: .5; cursor: default; }
+
+  main { max-width: 1120px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+  @media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } aside { order: -1; } }
+
+  .banner {
+    display: none; width: 100%; margin-bottom: 12px; padding: 9px 14px; border-radius: 10px; cursor: pointer;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft); color: var(--accent);
+    font-weight: 600; font-size: 14px; text-align: center;
+  }
+  .banner.show { display: block; }
+  .error { display: none; margin-bottom: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--err) 40%, transparent); color: var(--err); font-size: 14px; word-break: break-word; }
+  .error.show { display: block; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
+    box-shadow: var(--shadow); position: relative; overflow-wrap: anywhere;
+  }
+  .card.fresh { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); animation: flash 2.4s ease-out; }
+  .card.fresh::before { content: "NEW"; position: absolute; top: 12px; right: 14px; font-size: 10px; font-weight: 700; letter-spacing: .06em; color: #fff; background: var(--accent); border-radius: 5px; padding: 1px 6px; }
+  @keyframes flash { from { background: var(--accent-soft); } to { background: var(--surface); } }
+  .meta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 12.5px; color: var(--muted); padding-right: 44px; }
+  .chip { background: var(--surface-2); color: var(--text); border-radius: 6px; padding: 0 7px; font-size: 12px; line-height: 20px; }
+  .chip.star { background: var(--accent-soft); color: var(--accent); }
+  .card h2 { margin: 6px 0 6px; font-size: 16.5px; line-height: 1.45; font-weight: 650; }
+  .card p { margin: 0; color: color-mix(in srgb, var(--text) 86%, var(--muted)); }
+  .reason { margin-top: 8px !important; padding-left: 10px; border-left: 2px solid var(--accent); font-size: 13.5px; color: var(--muted) !important; }
+  .links { margin-top: 9px; display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
+  .links a { border-bottom: 1px dotted currentColor; }
+
+  aside .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); position: sticky; top: calc(var(--header-h, 110px) + 16px); max-height: calc(100vh - var(--header-h, 110px) - 32px); overflow: auto; }
+  @media (max-width: 860px) { aside .panel { position: static; max-height: 300px; } }
+  aside h3 { margin: 0 0 8px; font-size: 14px; display: flex; justify-content: space-between; align-items: baseline; }
+  aside h3 small { font-weight: 400; color: var(--muted); font-size: 12px; }
+  ol.hot { list-style: none; margin: 0; padding: 0; }
+  ol.hot li { display: grid; grid-template-columns: 22px 1fr; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13.5px; line-height: 1.5; overflow-wrap: anywhere; }
+  ol.hot li:first-child { border-top: 0; }
+  .rank { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  ol.hot li:nth-child(-n+3) .rank { color: var(--accent); }
+  .hot small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+  /* 滚动播报：固定高度的视窗，内容由脚本匀速上移，首尾用一份克隆无缝衔接 */
+  .scroller.on {
+    height: calc(100vh - var(--header-h, 110px) - 32px); min-height: 360px;
+    overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+    padding: 14px 0;
+  }
+  .scroller.on::-webkit-scrollbar { display: none; }
+  .scroller.on .card.fresh { animation: none; }
+
+  .empty { text-align: center; color: var(--muted); padding: 48px 0; }
+  .more { display: block; margin: 14px auto 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand"><span class="dot" id="dot"></span>AI 动态 <span class="status" id="status">准备中…</span></div>
+    <button class="btn" id="refresh" title="立即刷新（快捷键 R）">↻ 刷新</button>
+    <button class="btn" id="theme" title="切换深浅色">◐</button>
+    <div class="controls">
+      <div class="seg" id="mode">
+        <button data-v="selected">精选</button>
+        <button data-v="all">全部</button>
+      </div>
+      <div class="seg" id="window">
+        <button data-v="24h">24 小时</button>
+        <button data-v="7d">7 天</button>
+      </div>
+      <select id="category" aria-label="分类"></select>
+      <input type="search" id="q" placeholder="搜索关键词（至少 2 个字）" maxlength="200">
+      <select id="interval" aria-label="自动刷新间隔">
+        <option value="60">每 1 分钟刷新</option>
+        <option value="300">每 5 分钟刷新</option>
+        <option value="900">每 15 分钟刷新</option>
+        <option value="1800">每 30 分钟刷新</option>
+        <option value="0">不自动刷新</option>
+      </select>
+      <select id="speed" aria-label="滚动播报速度" title="鼠标悬停在卡片上会暂停滚动">
+        <option value="0">滚动：关</option>
+        <option value="15">滚动：慢</option>
+        <option value="28">滚动：中</option>
+        <option value="50">滚动：快</option>
+      </select>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section>
+    <button class="banner" id="banner"></button>
+    <div class="error" id="error"></div>
+    <div class="scroller" id="scroller">
+      <div id="feed"><div class="empty">加载中…</div></div>
+      <div id="feedClone" aria-hidden="true" hidden></div>
+    </div>
+    <button class="btn more" id="more" hidden>加载更多</button>
+  </section>
+  <aside>
+    <div class="panel">
+      <h3>当前热点 <small id="hotAt"></small></h3>
+      <ol class="hot" id="hot"><li><span></span><span style="color:var(--muted)">加载中…</span></li></ol>
+    </div>
+  </aside>
+</main>
+
+
+<script>
+(() => {
+  const API = 'https://aihot.news/api/v1';
+  const PAGE_SIZE = 50;
+  // /items 与 /hot-topics 的 s-maxage 都是 60 秒，轮询更密只会拿到同一份缓存
+  const MIN_INTERVAL = 60;
+  const CATEGORIES = { '': '全部分类', 'ai-models': '模型', 'ai-products': '产品', 'industry': '行业', 'paper': '论文', 'tip': '技巧' };
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('aihot-live:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem('aihot-live:' + k, JSON.stringify(v)); } catch {} },
+  };
+
+  const $ = id => document.getElementById(id);
+  const state = {
+    mode: store.get('mode', 'selected'),
+    window: store.get('window', '7d'),
+    category: store.get('category', ''),
+    q: '',
+    interval: store.get('interval', 300),
+    speed: store.get('speed', matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 28),   // 滚动播报速度，px/秒；0 为关闭
+    items: [], nextCursor: null,
+    feedUrl: '', feedEtag: null, hotEtag: null,
+    known: null,          // 当前查询下已见过的条目 id；null 表示还没有基线
+    fresh: new Set(),     // 尚未标记已读的新条目
+    nextAt: 0, loading: false, lastChecked: 0, error: null,
+  };
+
+  // ---------- helpers ----------
+  function el(tag, props, ...children) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(props || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else n.setAttribute(k, v);
+    }
+    for (const c of children) if (c != null) n.append(c);
+    return n;
+  }
+  // 接口返回的是外部资料：只接受 http(s) 链接，文本一律走 textContent
+  function safeUrl(u) { try { const p = new URL(u); return (p.protocol === 'https:' || p.protocol === 'http:') ? p.href : null; } catch { return null; } }
+  function link(href, text, cls) {
+    const u = safeUrl(href);
+    return u ? el('a', { href: u, target: '_blank', rel: 'noopener noreferrer', class: cls, text }) : el('span', { class: cls, text });
+  }
+  function ago(iso) {
+    const t = Date.parse(iso); if (isNaN(t)) return '';
+    const s = Math.max(0, (Date.now() - t) / 1000);
+    if (s < 60) return '刚刚';
+    if (s < 3600) return Math.floor(s / 60) + ' 分钟前';
+    if (s < 86400) return Math.floor(s / 3600) + ' 小时前';
+    if (s < 86400 * 7) return Math.floor(s / 86400) + ' 天前';
+    return new Date(t).toLocaleDateString('zh-CN');
+  }
+  const clock = t => new Date(t).toLocaleTimeString('zh-CN', { hour12: false });
+  const fullTime = iso => { const t = Date.parse(iso); return isNaN(t) ? '' : new Date(t).toLocaleString('zh-CN', { hour12: false }); };
+
+  async function api(path, params, etag) {
+    const url = new URL(API + path);
+    for (const [k, v] of Object.entries(params || {})) if (v) url.searchParams.set(k, v);
+    const headers = { Accept: 'application/json' };
+    if (etag) headers['If-None-Match'] = etag;
+    const res = await fetch(url, { headers });
+    if (res.status === 304) return { notModified: true };
+    if (!res.ok) {
+      let p = null; try { p = await res.json(); } catch {}
+      const e = new Error((p && (p.detail || p.title)) || ('HTTP ' + res.status));
+      e.status = res.status;
+      e.retryAfter = parseInt(res.headers.get('Retry-After'), 10) || 0;
+      e.requestId = (p && p.requestId) || res.headers.get('X-Request-Id');
+      throw e;
+    }
+    return { data: await res.json(), etag: res.headers.get('ETag') };
+  }
+
+  const feedParams = cursor => ({
+    mode: state.mode, window: state.window, category: state.category,
+    q: state.q.length >= 2 ? state.q : '', limit: PAGE_SIZE, cursor,
+  });
+  const queryKey = () => JSON.stringify([state.mode, state.window, state.category, state.q.length >= 2 ? state.q : '']);
+
+  // ---------- data ----------
+  async function loadFeed() {
+    const key = queryKey();
+    const sameQuery = key === state.feedUrl;
+    const r = await api('/items', feedParams(), sameQuery ? state.feedEtag : null);
+    if (key !== queryKey()) return;              // 请求期间筛选条件变了，丢弃
+    if (r.notModified) return;
+    const page = r.data.items || [];
+    state.feedEtag = r.etag; state.feedUrl = key;
+
+    if (!sameQuery || !state.known) {
+      // 新查询：以这一页为基线。若上次关闭页面时是同一查询，则把期间新增的标出来
+      const saved = store.get('seen', null);
+      state.fresh = new Set();
+      if (saved && saved.key === key) {
+        const seen = new Set(saved.ids);
+        for (const it of page) if (!seen.has(it.id)) state.fresh.add(it.id);
+      }
+      state.known = new Set(page.map(i => i.id));
+      state.items = page;
+      state.nextCursor = r.data.page && r.data.page.hasMore ? r.data.page.nextCursor : null;
+    } else {
+      let added = 0;
+      for (const it of page) if (!state.known.has(it.id)) { state.known.add(it.id); state.fresh.add(it.id); added++; }
+      if (added) ticker.rewind();                // 有新动态：滚动播报回到开头，先播新的
+      // 第一页换成最新内容，保留用户已经“加载更多”翻出来的旧条目
+      const ids = new Set(page.map(i => i.id));
+      state.items = page.concat(state.items.filter(i => !ids.has(i.id)));
+    }
+    store.set('seen', { key, ids: state.items.slice(0, 300).map(i => i.id) });
+    renderFeed();
+  }
+
+  async function loadMore() {
+    if (!state.nextCursor) return;
+    const btn = $('more'); btn.disabled = true; btn.textContent = '加载中…';
+    try {
+      const key = queryKey();
+      const r = await api('/items', feedParams(state.nextCursor));
+      if (key !== queryKey()) return;
+      const have = new Set(state.items.map(i => i.id));
+      for (const it of r.data.items || []) if (!have.has(it.id)) { state.items.push(it); state.known.add(it.id); }
+      state.nextCursor = r.data.page && r.data.page.hasMore ? r.data.page.nextCursor : null;
+      renderFeed();
+    } catch (e) {
+      // 滚动窗口前移后旧 cursor 会失效：重新拉第一页即可
+      state.nextCursor = null; showError(e); renderFeed();
+    } finally { btn.disabled = false; btn.textContent = '加载更多'; }
+  }
+
+  async function loadHot() {
+    const r = await api('/hot-topics', null, state.hotEtag);
+    if (r.notModified) return;
+    state.hotEtag = r.etag;
+    renderHot(r.data.items || []);
+  }
+
+  async function refresh() {
+    if (state.loading) return;
+    state.loading = true; renderStatus();
+    let retryAfter = 0;
+    const results = await Promise.allSettled([loadFeed(), loadHot()]);
+    const failed = results.find(r => r.status === 'rejected');
+    if (failed) { showError(failed.reason); retryAfter = failed.reason.retryAfter || 0; }
+    else { state.error = null; $('error').classList.remove('show'); }
+    state.lastChecked = Date.now();
+    state.loading = false;
+    schedule(retryAfter);
+    renderStatus();
+  }
+
+  function schedule(retryAfter) {
+    if (!state.interval && !retryAfter) { state.nextAt = 0; return; }
+    const wait = Math.max(state.interval || 0, retryAfter || 0, MIN_INTERVAL);
+    state.nextAt = Date.now() + wait * 1000;
+  }
+
+  function resetQuery() {
+    state.known = null; state.feedEtag = null; state.feedUrl = ''; state.fresh = new Set();
+    state.items = []; state.nextCursor = null;
+    $('feed').replaceChildren(el('div', { class: 'empty', text: '加载中…' }));
+    $('more').hidden = true;
+    ticker.sync(); ticker.rewind();
+    renderBanner();
+    refresh();
+  }
+
+  // ---------- render ----------
+  function renderFeed() {
+    const feed = $('feed');
+    if (!state.items.length) {
+      feed.replaceChildren(el('div', { class: 'empty', text: state.q.length >= 2 ? '没有匹配的内容' : '这个时间窗口内暂无内容' }));
+    } else {
+      feed.replaceChildren(...state.items.map(card));
+    }
+    $('more').hidden = !state.nextCursor || state.speed > 0;
+    ticker.sync();
+    renderBanner();
+  }
+
+  // ---------- 滚动播报 ----------
+  const ticker = (() => {
+    const scroller = $('scroller'), feed = $('feed'), clone = $('feedClone');
+    let pos = 0, last = 0, hover = false, touchUntil = 0;
+
+    // 内容比视窗高才需要循环：在末尾接一份克隆，滚过一整份后把位置减回去，视觉上无缝
+    function sync() {
+      scroller.classList.toggle('on', state.speed > 0);
+      clone.replaceChildren();
+      clone.hidden = true;
+      if (!state.speed || !state.items.length) return;
+      if (feed.offsetHeight <= scroller.clientHeight) return;
+      clone.replaceChildren(...state.items.map(card));
+      clone.querySelectorAll('a').forEach(a => a.setAttribute('tabindex', '-1'));
+      clone.hidden = false;
+    }
+    function rewind() { pos = 0; scroller.scrollTop = 0; }
+
+    function frame(t) {
+      const dt = Math.min(100, t - last); last = t;
+      const paused = hover || Date.now() < touchUntil || scroller.contains(document.activeElement);
+      if (state.speed && !clone.hidden) {
+        // 用户用滚轮/触摸自己滚过：以实际位置为准接着播
+        if (paused || Math.abs(scroller.scrollTop - pos) > 2) pos = scroller.scrollTop;
+        const len = clone.offsetTop - feed.offsetTop;
+        const before = pos;
+        if (!paused) pos += state.speed * dt / 1000;
+        if (len > 0 && pos >= len) pos -= len;
+        if (pos !== before) scroller.scrollTop = pos;
+      }
+      requestAnimationFrame(frame);
+    }
+
+    scroller.addEventListener('mouseenter', () => { hover = true; });
+    scroller.addEventListener('mouseleave', () => { hover = false; });
+    const touched = () => { touchUntil = Date.now() + 4000; };
+    scroller.addEventListener('touchstart', touched, { passive: true });
+    scroller.addEventListener('touchmove', touched, { passive: true });
+    requestAnimationFrame(frame);
+    return { sync, rewind };
+  })();
+
+  function card(it) {
+    const links = it.links || {};
+    const meta = el('div', { class: 'meta' },
+      it.category ? el('span', { class: 'chip', text: CATEGORIES[it.category] || it.category }) : null,
+      it.selected && state.mode === 'all' ? el('span', { class: 'chip star', text: '精选' }) : null,
+      el('span', { text: (it.source && it.source.name) || '' }),
+      el('time', { datetime: it.publishedAt, title: fullTime(it.publishedAt), 'data-ago': it.publishedAt, text: ago(it.publishedAt) }),
+      typeof it.score === 'number' ? el('span', { text: it.score + ' 分', title: 'AIHOT 评分' }) : null,
+    );
+    return el('article', { class: 'card' + (state.fresh.has(it.id) ? ' fresh' : '') },
+      meta,
+      el('h2', null, link(links.original || links.aihot, it.title || it.originalTitle || '(无标题)')),
+      it.summary ? el('p', { text: it.summary }) : null,
+      it.reason ? el('p', { class: 'reason', text: it.reason }) : null,
+      el('div', { class: 'links' },
+        links.original ? link(links.original, '原文 ↗') : null,
+        links.aihot ? link(links.aihot, 'AIHOT 阅读页') : null,
+      ),
+    );
+  }
+
+  function renderHot(items) {
+    $('hotAt').textContent = '更新于 ' + clock(Date.now());
+    if (!items.length) { $('hot').replaceChildren(el('li', null, el('span'), el('span', { text: '暂无热点' }))); return; }
+    $('hot').replaceChildren(...items.map(t => {
+      const l = t.links || {};
+      return el('li', null,
+        el('span', { class: 'rank', text: t.rank }),
+        el('div', null,
+          link(l.story || l.aihot || l.original, t.title),
+          el('small', null,
+            (t.sourceCount ? t.sourceCount + ' 个信源 · ' : ''),
+            el('span', { 'data-ago': t.latestAt, text: ago(t.latestAt) }),
+          ),
+        ),
+      );
+    }));
+  }
+
+  function renderBanner() {
+    const n = state.fresh.size;
+    const b = $('banner');
+    b.classList.toggle('show', n > 0);
+    b.textContent = n ? `有 ${n} 条新动态 · 点击标记为已读` : '';
+    document.title = (n ? `(${n}) ` : '') + '瑞泊-AI动态';
+  }
+
+  function showError(e) {
+    state.error = e;
+    const hint = e.status === 429 || e.status === 503 ? '（已按 Retry-After 退避）' : '';
+    $('error').textContent = `请求失败：${e.message}${hint}` + (e.requestId ? ` · requestId: ${e.requestId}` : '');
+    $('error').classList.add('show');
+  }
+
+  function renderStatus() {
+    const dot = $('dot');
+    dot.className = 'dot ' + (state.loading ? 'busy' : state.error ? 'err' : state.nextAt ? 'live' : '');
+    let s = state.loading ? '刷新中…' : state.lastChecked ? `上次检查 ${clock(state.lastChecked)}` : '';
+    if (!state.loading && state.nextAt) {
+      const left = Math.max(0, Math.ceil((state.nextAt - Date.now()) / 1000));
+      s += ` · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} 后刷新`;
+    }
+    $('status').textContent = s;
+  }
+
+  // ---------- wiring ----------
+  function bindSeg(id, key) {
+    const box = $(id);
+    const sync = () => box.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === state[key])));
+    box.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b || b.dataset.v === state[key]) return;
+      state[key] = b.dataset.v; store.set(key, state[key]); sync(); resetQuery();
+    });
+    sync();
+  }
+  bindSeg('mode', 'mode');
+  bindSeg('window', 'window');
+
+  const cat = $('category');
+  for (const [v, label] of Object.entries(CATEGORIES)) cat.append(el('option', { value: v, text: label }));
+  cat.value = state.category;
+  cat.addEventListener('change', () => { state.category = cat.value; store.set('category', state.category); resetQuery(); });
+
+  const iv = $('interval');
+  iv.value = String(state.interval);
+  iv.addEventListener('change', () => { state.interval = Number(iv.value); store.set('interval', state.interval); schedule(0); renderStatus(); });
+
+  const sp = $('speed');
+  sp.value = String(state.speed);
+  if (sp.selectedIndex < 0) sp.value = '28';
+  sp.addEventListener('change', () => {
+    const wasOff = !state.speed;
+    state.speed = Number(sp.value); store.set('speed', state.speed);
+    if (wasOff || !state.speed) renderFeed();    // 开关切换才需要重建克隆；只换速度不打断当前位置
+  });
+
+  // 顶栏会随宽度换行，把实际高度交给 CSS 计算滚动视窗和侧栏的位置
+  const headerEl = document.querySelector('header');
+  const setHeaderH = () => document.documentElement.style.setProperty('--header-h', headerEl.offsetHeight + 'px');
+  new ResizeObserver(() => { setHeaderH(); ticker.sync(); }).observe(headerEl);
+  addEventListener('resize', () => ticker.sync());
+  setHeaderH();
+
+  let qTimer;
+  $('q').addEventListener('input', e => {
+    clearTimeout(qTimer);
+    qTimer = setTimeout(() => {
+      const v = e.target.value.trim();
+      const before = state.q.length >= 2 ? state.q : '';
+      state.q = v;
+      if ((v.length >= 2 ? v : '') !== before) resetQuery();
+    }, 500);
+  });
+
+  $('refresh').addEventListener('click', refresh);
+  $('more').addEventListener('click', loadMore);
+  $('banner').addEventListener('click', () => { state.fresh.clear(); renderFeed(); });
+  document.addEventListener('keydown', e => {
+    if (e.key.toLowerCase() === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) refresh();
+  });
+
+  $('theme').addEventListener('click', () => {
+    const root = document.documentElement;
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    store.set('theme', root.dataset.theme);
+  });
+  const savedTheme = store.get('theme', null);
+  if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+
+  // 用截止时间而不是 setInterval(refresh)：后台标签页定时器被节流、电脑休眠唤醒后都能立刻补上
+  setInterval(() => {
+    if (state.nextAt && Date.now() >= state.nextAt && !state.loading) refresh();
+    else renderStatus();
+  }, 1000);
+  setInterval(() => document.querySelectorAll('[data-ago]').forEach(n => { n.textContent = ago(n.dataset.ago); }), 30000);
+
+  refresh();
+})();
+</script>
+</body>
+</html>
