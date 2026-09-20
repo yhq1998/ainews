@@ -73,7 +73,7 @@
   .btn:hover { border-color: var(--accent); color: var(--accent); }
   .btn:disabled { opacity: .5; cursor: default; }
 
-  main { max-width: 1120px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+  main { max-width: 1120px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
   @media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } aside { order: -1; } }
 
   .banner {
@@ -109,21 +109,29 @@
 
   aside .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); position: sticky; top: calc(var(--header-h, 110px) + 16px); max-height: calc(100vh - var(--header-h, 110px) - 32px); overflow: auto; }
   @media (max-width: 860px) { aside .panel { position: static; max-height: 300px; } }
-  aside h3 { margin: 0 0 8px; font-size: 14px; display: flex; justify-content: space-between; align-items: baseline; }
-  aside h3 small { font-weight: 400; color: var(--muted); font-size: 12px; }
+  /* 热点榜：强调色顶边 + 吸顶标题带，前三名放大，状态用一眼能懂的胶囊标签 */
+  aside .panel { padding: 0; border-top: 3px solid var(--accent); }
+  .hot-head { position: sticky; top: 0; z-index: 1; border-radius: 10px 10px 0 0; padding: 12px 16px 10px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, var(--accent-soft), var(--surface) 90%); }
+  .hot-head h3 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: .02em; display: flex; align-items: center; gap: 6px; }
+  .hot-head h3 svg { width: 19px; height: 19px; fill: var(--accent); flex: none; }
+  .hot-head h3 small { margin-left: auto; font-weight: 400; color: var(--muted); font-size: 12px; letter-spacing: 0; }
+  .hot-head p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
   ol.hot { list-style: none; margin: 0; padding: 0; }
-  ol.hot li { display: grid; grid-template-columns: 26px 1fr; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13.5px; line-height: 1.5; overflow-wrap: anywhere; }
+  ol.hot li { display: grid; grid-template-columns: 30px 1fr; gap: 8px; padding: 11px 16px; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
   ol.hot li:first-child { border-top: 0; }
-  .rank { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-  ol.hot li:nth-child(-n+3) .rank { color: var(--accent); }
-  .hot small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .mv { display: block; font-size: 10.5px; font-weight: 700; line-height: 1.3; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .mv.up { color: var(--ok); }
-  .mv.down { color: var(--err); }
-  .mv.new { display: inline-block; color: #fff; background: var(--accent); border-radius: 4px; padding: 0 3px; font-weight: 600; }
-  .heat { height: 3px; border-radius: 2px; background: var(--surface-2); margin-top: 6px; overflow: hidden; }
-  .heat i { display: block; height: 100%; border-radius: 2px; background: var(--accent); opacity: .75; }
-  .hot-note { margin: 8px 0 0; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+  .rank { font-size: 19px; font-weight: 800; font-style: italic; line-height: 1.25; color: color-mix(in srgb, var(--muted) 55%, transparent); font-variant-numeric: tabular-nums; }
+  ol.hot li.top .rank { color: var(--accent); }
+  ol.hot li.top a { font-weight: 650; }
+  ol.hot li.first { background: color-mix(in srgb, var(--accent-soft) 65%, transparent); }
+  ol.hot li.first a { font-size: 15px; }
+  .hot small { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .hot small b { color: var(--text); font-weight: 700; font-size: 13px; }
+  .mv { font-size: 11px; font-weight: 700; line-height: 17px; padding: 0 6px; border-radius: 9px; white-space: nowrap; }
+  .mv.up { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+  .mv.down { color: var(--err); background: color-mix(in srgb, var(--err) 13%, transparent); }
+  .mv.new { color: #fff; background: var(--accent); }
+  .heat { height: 4px; border-radius: 2px; background: var(--surface-2); margin-top: 7px; overflow: hidden; }
+  .heat i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, transparent), var(--accent)); }
   .chip.onhot { background: var(--accent); color: #fff; font-weight: 600; }
 
   /* 滚动播报：固定高度的视窗，内容由脚本匀速上移，首尾用一份克隆无缝衔接 */
@@ -155,7 +163,8 @@
     main { padding: 10px 12px calc(var(--bottom-h) + 12px); gap: 0; }
     body[data-view="feed"] aside, body[data-view="hot"] .feedcol { display: none; }
     aside .panel { position: static; max-height: none; overflow: visible; }
-    ol.hot li { font-size: 14.5px; padding: 10px 0; }
+    ol.hot li { font-size: 15px; padding: 12px 14px; }
+    .hot-head { position: static; }
     .scroller.on { height: calc(100vh - var(--header-h, 53px) - var(--bottom-h) - 20px); min-height: 240px; padding: 10px 0; }
     @supports (height: 100dvh) { .scroller.on { height: calc(100dvh - var(--header-h, 53px) - var(--bottom-h) - 20px); } }
     .card { padding: 12px 14px; }
@@ -256,9 +265,11 @@
   </section>
   <aside>
     <div class="panel">
-      <h3>当前热点 <small id="hotAt"></small></h3>
+      <div class="hot-head">
+        <h3><svg viewBox="0 0 24 24"><path d="M12.6 2c.7 3.7 5.4 6 5.4 11.3A6 6 0 0 1 6 13.5c0-2.4 1.2-3.9 2.5-5.1.2 1.900 1 2.900 2.100 3.300C10 8.3 10.9 4.6 12.6 2Z"/></svg>热点榜 <small id="hotAt"></small></h3>
+        <p>过去 48 小时 · 多个信源共同印证的事件</p>
+      </div>
       <ol class="hot" id="hot"><li><span></span><span style="color:var(--muted)">加载中…</span></li></ol>
-      <p class="hot-note">▲2 / ▼2：比上次排名升 / 降了 2 位　·　新：6 小时内刚上榜<br>橙色横条越长，参与讨论的账号越多</p>
     </div>
   </aside>
 </main>
@@ -573,10 +584,10 @@
     saved.seen = seen;
     store.set('hot', saved);
     return (key, rank) => {
-      if (seen[key] && now - seen[key] < NEW_WINDOW) return { cls: 'new', text: '新', title: '6 小时内新上榜' };
+      if (seen[key] && now - seen[key] < NEW_WINDOW) return { cls: 'new', text: '新上榜', title: '6 小时内新上榜' };
       const was = saved.prev ? saved.prev.indexOf(key) + 1 : 0;
       if (!was || was === rank) return null;
-      return was > rank ? { cls: 'up', text: '▲' + (was - rank), title: `上一版第 ${was}` } : { cls: 'down', text: '▼' + (rank - was), title: `上一版第 ${was}` };
+      return was > rank ? { cls: 'up', text: `↑ 升 ${was - rank} 位`, title: `上一版第 ${was} 名` } : { cls: 'down', text: `↓ 降 ${rank - was} 位`, title: `上一版第 ${was} 名` };
     };
   }
 
@@ -589,17 +600,15 @@
       const l = t.links || {};
       const mv = move(hotKey(t), t.rank);
       const people = t.participantCount || 0;
-      return el('li', null,
-        el('div', null,
-          el('span', { class: 'rank', text: t.rank }),
-          mv ? el('span', { class: 'mv ' + mv.cls, text: mv.text, title: mv.title }) : null,
-        ),
+      return el('li', { class: t.rank === 1 ? 'top first' : t.rank <= 3 ? 'top' : null },
+        el('span', { class: 'rank', text: String(t.rank).padStart(2, '0') }),
         el('div', null,
           link(l.story || l.aihot || l.original, t.title),
           el('small', null,
-            (people ? people + ' 方讨论 · ' : ''),
-            (t.sourceCount ? t.sourceCount + ' 家报道 · ' : ''),
-            el('span', { 'data-ago': t.latestAt, text: ago(t.latestAt) }),
+            mv ? el('span', { class: 'mv ' + mv.cls, text: mv.text, title: mv.title }) : null,
+            people ? el('span', null, el('b', { text: people }), ' 方讨论') : null,
+            t.sourceCount ? el('span', { text: '· ' + t.sourceCount + ' 家报道' }) : null,
+            el('span', null, '· ', el('span', { 'data-ago': t.latestAt, text: ago(t.latestAt) })),
           ),
           people ? el('div', { class: 'heat', title: `${people} 方参与讨论（去重后的个人与机构账号）` }, el('i', { style: `width:${Math.round(people / maxPeople * 100)}%` })) : null,
         ),
