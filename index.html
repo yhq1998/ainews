@@ -179,7 +179,7 @@
     <div class="panel">
       <h3>当前热点 <small id="hotAt"></small></h3>
       <ol class="hot" id="hot"><li><span></span><span style="color:var(--muted)">加载中…</span></li></ol>
-      <p class="hot-note">▲▼ 为相对上一版榜单的名次变化，「新」为 6 小时内新上榜；横条表示讨论参与人数。</p>
+      <p class="hot-note">▲2 / ▼2：比上次排名升 / 降了 2 位　·　新：6 小时内刚上榜<br>橙色横条越长，参与讨论的账号越多</p>
     </div>
   </aside>
 </main>
@@ -482,11 +482,11 @@
         el('div', null,
           link(l.story || l.aihot || l.original, t.title),
           el('small', null,
-            (people ? people + ' 人讨论 · ' : ''),
-            (t.sourceCount ? t.sourceCount + ' 个信源 · ' : ''),
+            (people ? people + ' 方讨论 · ' : ''),
+            (t.sourceCount ? t.sourceCount + ' 家报道 · ' : ''),
             el('span', { 'data-ago': t.latestAt, text: ago(t.latestAt) }),
           ),
-          people ? el('div', { class: 'heat', title: `${people} 人参与讨论` }, el('i', { style: `width:${Math.round(people / maxPeople * 100)}%` })) : null,
+          people ? el('div', { class: 'heat', title: `${people} 方参与讨论（去重后的个人与机构账号）` }, el('i', { style: `width:${Math.round(people / maxPeople * 100)}%` })) : null,
         ),
       );
     }));
