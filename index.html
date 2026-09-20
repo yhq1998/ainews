@@ -51,8 +51,9 @@
     backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--line);
   }
-  .bar { max-width: 1120px; margin: 0 auto; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
-  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; margin-right: auto; }
+  .bar { max-width: 1120px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 8px; align-items: center; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; margin-right: 6px; white-space: nowrap; flex: none; }
+  .bar > .btn { order: 2; width: 36px; padding: 0; flex: none; }
   .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
   .dot.live { background: var(--ok); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent); animation: pulse 2s infinite; }
   .dot.busy { background: var(--accent); }
@@ -60,14 +61,15 @@
   @keyframes pulse { 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
 
   .status { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
-  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; }
+  /* 和标题、按钮排在同一行；窗口较窄时控件在自己的区域内换行 */
+  .controls { order: 1; flex: 1 1 0; min-width: 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .seg { display: inline-flex; background: var(--surface-2); border-radius: 9px; padding: 3px; }
   .seg button { border: 0; background: none; padding: 4px 12px; border-radius: 7px; cursor: pointer; color: var(--muted); font-size: 14px; }
   .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); font-weight: 600; }
   select, input[type="search"], .btn {
     background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 5px 10px; font-size: 14px; height: 34px;
   }
-  input[type="search"] { flex: 1 1 160px; min-width: 120px; outline: none; }
+  input[type="search"] { flex: 1 1 120px; min-width: 100px; outline: none; }
   input[type="search"]:focus, select:focus { border-color: var(--accent); }
   .btn { cursor: pointer; }
   .btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -145,6 +147,14 @@
   .scroller.on::-webkit-scrollbar { display: none; }
   .scroller.on .card.fresh { animation: none; }
 
+  /* 窄一些的桌面窗口：收紧间距、隐藏倒计时文字（悬停状态点仍可看），尽量保持一行 */
+  @media (min-width: 861px) and (max-width: 1100px) {
+    .status { display: none; }
+    .seg button { padding: 4px 8px; }
+    .controls { gap: 6px; }
+    input[type="search"] { flex-basis: 70px; min-width: 70px; }
+  }
+
   /* 控件分组：桌面端只是透明包装，标签文字不显示 */
   .field { display: contents; }
   .lbl, .drawer-head, .overlay, .tabbar { display: none; }
@@ -154,11 +164,9 @@
     :root { --bottom-h: calc(54px + env(safe-area-inset-bottom, 0px)); }
     /* backdrop-filter 会让 fixed 子元素以顶栏为基准，抽屉就出不来了，手机端改用纯色 */
     header { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--bg); }
-    .bar { padding: 8px 12px; gap: 8px; flex-wrap: nowrap; }
-    .brand { font-size: 16px; min-width: 0; white-space: nowrap; }
+    .bar { padding: 8px 12px; }
+    .brand { font-size: 16px; min-width: 0; margin-right: auto; flex: 0 1 auto; }
     .status { overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 400; }
-    .status .long, .wide { display: none; }
-    .bar > .btn { width: 36px; padding: 0; flex: none; }
 
     main { padding: 10px 12px calc(var(--bottom-h) + 12px); gap: 0; }
     body[data-view="feed"] aside, body[data-view="hot"] .feedcol { display: none; }
@@ -215,7 +223,7 @@
 <header>
   <div class="bar">
     <div class="brand"><span class="dot" id="dot"></span>AI 动态 <span class="status" id="status">准备中…</span></div>
-    <button class="btn" id="refresh" title="立即刷新（快捷键 R）">↻<span class="wide"> 刷新</span></button>
+    <button class="btn" id="refresh" title="立即刷新（快捷键 R）">↻</button>
     <button class="btn" id="theme" title="切换深浅色">◐</button>
     <div class="overlay" id="overlay"></div>
     <!-- 桌面端是顶栏里的一行控件；手机端同一份 DOM 变成右侧滑出的抽屉 -->
@@ -234,7 +242,7 @@
       <label class="field"><span class="lbl">分类</span>
       <select id="category" aria-label="分类"></select></label>
       <label class="field"><span class="lbl">搜索</span>
-      <input type="search" id="q" placeholder="搜索关键词（至少 2 个字）" maxlength="200"></label>
+      <input type="search" id="q" placeholder="搜索关键词" title="至少输入 2 个字" maxlength="200"></label>
       <label class="field"><span class="lbl">自动刷新</span>
       <select id="interval" aria-label="自动刷新间隔">
         <option value="60">每 1 分钟刷新</option>
@@ -642,8 +650,10 @@
       const left = Math.max(0, Math.ceil((state.nextAt - Date.now()) / 1000));
       next = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} 后刷新`;
     }
-    // 手机端顶栏窄，只留倒计时（.long 在窄屏隐藏）；刷新中 / 无倒计时的时候整句都显示
-    $('status').replaceChildren(next ? el('span', { class: 'long', text: checked + ' · ' }) : checked, next);
+    // 顶栏只占一行，平时只显示倒计时；「上次检查」的时间放进悬停提示
+    $('status').textContent = next || checked;
+    $('status').title = state.lastChecked ? `上次检查 ${clock(state.lastChecked)}` : '';
+    $('dot').title = [next, $('status').title].filter(Boolean).join(' · ');
   }
 
   // ---------- wiring ----------
