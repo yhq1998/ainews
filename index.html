@@ -313,6 +313,8 @@
   const PAGE_SIZE = 50;
   // /items 与 /hot-topics 的 s-maxage 都是 60 秒，轮询更密只会拿到同一份缓存
   const MIN_INTERVAL = 60;
+  // 滚动播报时自动把后面的分页都拉进来；「全部」模式 7 天内可能有上千条，设个上限免得页面过重
+  const AUTO_LOAD_CAP = 300;
   const CATEGORIES = { '': '全部分类', 'ai-models': '模型', 'ai-products': '产品', 'industry': '行业', 'paper': '论文', 'tip': '技巧' };
 
   const store = {
@@ -446,6 +448,18 @@
     }
   }
 
+  // 滚动播报是循环播放，没有「底部」可言：不让用户点按钮，而是在后台逐页拉完（到上限为止）
+  async function autoLoadAll() {
+    if (state.autoLoading) return;
+    state.autoLoading = true;
+    try {
+      while (state.speed > 0 && state.nextCursor && state.items.length < AUTO_LOAD_CAP && state.more !== 'error') {
+        await loadMore();
+        await new Promise(r => setTimeout(r, 400));   // 分页之间留点间隔，别对接口连发
+      }
+    } finally { state.autoLoading = false; renderEnd(); }
+  }
+
   async function loadHot() {
     const r = await api('/hot-topics', null, state.hotEtag);
     if (r.notModified) return;
@@ -470,6 +484,10 @@
     schedule(retryAfter);
     renderStatus();
     if (state.again && !retryAfter) refresh();
+    else if (state.speed > 0 && state.nextCursor && !retryAfter) {
+      if (state.more === 'error') state.more = 'idle';
+      autoLoadAll();
+    }
   }
 
   function schedule(retryAfter) {
@@ -556,7 +574,12 @@
     const n = state.items.length;
     const scope = (state.window === '24h' ? '最近 24 小时' : '最近 7 天') + (state.q.length >= 2 || state.category || state.mode === 'all' ? '、当前筛选下' : '');
     const box = el('div', { class: 'end' });
-    if (state.nextCursor) {
+    if (state.speed > 0 && state.nextCursor) {
+      const text = n >= AUTO_LOAD_CAP ? `已加载最新 ${n} 条`
+        : state.more === 'error' ? `已加载 ${n} 条，其余稍后自动重试`
+        : `已加载 ${n} 条，正在加载其余内容…`;
+      box.append(el('div', { class: 'line', text: text + (looping ? ' · 将从头循环' : '') }));
+    } else if (state.nextCursor) {
       if (state.more === 'error') box.append(el('span', { class: 'err', text: '加载失败：' + (state.moreError && state.moreError.status ? state.moreError.message : '网络连接异常') + '　' }));
       box.append(el('button', { class: 'btn', 'data-more': '', disabled: state.more === 'loading' ? '' : null,
         text: state.more === 'loading' ? '加载中…' : state.more === 'error' ? '点击重试' : `加载更多（已显示 ${n} 条）` }));
@@ -702,6 +725,7 @@
     const wasOff = !state.speed;
     state.speed = Number(sp.value); store.set('speed', state.speed);
     if (wasOff || !state.speed) renderFeed();    // 开关切换才需要重建克隆；只换速度不打断当前位置
+    if (state.speed) autoLoadAll();
   });
 
   // 桌面端把原生 select 换成自绘下拉：选中后回写 select 并派发 change，原有逻辑不用改
