@@ -136,7 +136,9 @@
   .heat i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, transparent), var(--accent)); }
   /* Tibo 重置日历卡片：左边是选中日期的预告/记录，右边是月历；高度约等于两张资讯卡片 */
   .tibo { border-color: color-mix(in srgb, var(--cat-tip) 45%, var(--line)); background: linear-gradient(180deg, color-mix(in srgb, var(--cat-tip) 7%, var(--surface)), var(--surface) 70%); }
-  .tibo-head { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--cat-tip); margin-bottom: 10px; }
+  .tibo-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid color-mix(in srgb, var(--cat-tip) 25%, var(--line)); }
+  .tibo-head strong { font-size: 17px; font-weight: 800; color: var(--cat-tip); letter-spacing: .01em; }
+  .tibo-head .sub { font-size: 12.5px; color: var(--muted); }
   .tibo-head .sp { margin-left: auto; font-weight: 400; color: var(--muted); font-size: 12px; }
   .tibo-head .sp a, .tibo-head .sp button { border: 0; background: none; padding: 0; color: inherit; cursor: pointer; border-bottom: 1px dotted currentColor; font-size: 12px; }
   .tibo-grid { display: grid; grid-template-columns: minmax(0, 1fr) 294px; gap: 20px; align-items: start; }
@@ -702,7 +704,7 @@
     const dayEvents = byDay.get(sel) || [];
     const isUp = up && up.day === sel;
     const info = el('div', { class: 'tibo-info' },
-      el('div', { class: 'tibo-eyebrow', text: isUp ? `下一次 · ${up.label}预告` : sel > today ? '预告' : sel === focus ? '最近一次记录' : '历史记录' }),
+      el('div', { class: 'tibo-eyebrow', text: isUp ? `下一次${up.type === 'reset_credit' ? ' Codex 重置卡发放' : ' Codex 额度全员重置'} · 预告` : sel > today ? '预告' : sel === focus ? '最近一次记录' : '历史记录' }),
       el('div', { class: 'tibo-date' }, dayLabel(sel), el('small', { text: weekdayOf(sel) + (sel === today ? ' · 今天' : '') })),
       isUp ? el('span', { class: 'tibo-count', 'data-until': up.schedule.from, text: untilText(up.schedule.from) }) : null,
     );
@@ -763,7 +765,9 @@
 
     const moved = sel !== focus || month !== focus.slice(0, 7);
     return el('article', { class: 'card tibo' },
-      el('div', { class: 'tibo-head' }, 'Tibo 重置 · 发卡日历',
+      el('div', { class: 'tibo-head' },
+        el('strong', { text: 'Codex 重置卡 · 额度重置日历' }),
+        el('span', { class: 'sub', text: 'OpenAI Codex 团队的 Tibo 在 X 上的预告与确认' }),
         el('span', { class: 'sp' }, moved ? el('button', { type: 'button', 'data-tibo-reset': '', text: '回到最近' }) : null)),
       el('div', { class: 'tibo-grid' }, info, cal),
     );
