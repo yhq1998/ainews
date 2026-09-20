@@ -102,11 +102,19 @@
   aside h3 { margin: 0 0 8px; font-size: 14px; display: flex; justify-content: space-between; align-items: baseline; }
   aside h3 small { font-weight: 400; color: var(--muted); font-size: 12px; }
   ol.hot { list-style: none; margin: 0; padding: 0; }
-  ol.hot li { display: grid; grid-template-columns: 22px 1fr; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13.5px; line-height: 1.5; overflow-wrap: anywhere; }
+  ol.hot li { display: grid; grid-template-columns: 26px 1fr; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13.5px; line-height: 1.5; overflow-wrap: anywhere; }
   ol.hot li:first-child { border-top: 0; }
   .rank { font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
   ol.hot li:nth-child(-n+3) .rank { color: var(--accent); }
   .hot small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .mv { display: block; font-size: 10.5px; font-weight: 700; line-height: 1.3; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .mv.up { color: var(--ok); }
+  .mv.down { color: var(--err); }
+  .mv.new { display: inline-block; color: #fff; background: var(--accent); border-radius: 4px; padding: 0 3px; font-weight: 600; }
+  .heat { height: 3px; border-radius: 2px; background: var(--surface-2); margin-top: 6px; overflow: hidden; }
+  .heat i { display: block; height: 100%; border-radius: 2px; background: var(--accent); opacity: .75; }
+  .hot-note { margin: 8px 0 0; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+  .chip.onhot { background: var(--accent); color: #fff; font-weight: 600; }
 
   /* 滚动播报：固定高度的视窗，内容由脚本匀速上移，首尾用一份克隆无缝衔接 */
   .scroller.on {
@@ -171,6 +179,7 @@
     <div class="panel">
       <h3>当前热点 <small id="hotAt"></small></h3>
       <ol class="hot" id="hot"><li><span></span><span style="color:var(--muted)">加载中…</span></li></ol>
+      <p class="hot-note">▲▼ 为相对上一版榜单的名次变化，「新」为 6 小时内新上榜；横条表示讨论参与人数。</p>
     </div>
   </aside>
 </main>
@@ -201,6 +210,7 @@
     feedUrl: '', feedEtag: null, hotEtag: null,
     known: null,          // 当前查询下已见过的条目 id；null 表示还没有基线
     fresh: new Set(),     // 尚未标记已读的新条目
+    hotRank: new Map(),   // 条目 id → 当前热点榜名次，用来在资讯卡片上打「热点」标记
     nextAt: 0, loading: false, lastChecked: 0, error: null,
   };
 
@@ -310,7 +320,10 @@
     const r = await api('/hot-topics', null, state.hotEtag);
     if (r.notModified) return;
     state.hotEtag = r.etag;
-    renderHot(r.data.items || []);
+    const items = r.data.items || [];
+    state.hotRank = new Map(items.map(t => [t.id, t.rank]));
+    renderHot(items);
+    if (state.items.length) renderFeed();
   }
 
   async function refresh() {
@@ -412,9 +425,10 @@
     const meta = el('div', { class: 'meta' },
       it.category ? el('span', { class: 'chip', text: CATEGORIES[it.category] || it.category }) : null,
       it.selected && state.mode === 'all' ? el('span', { class: 'chip star', text: '精选' }) : null,
+      state.hotRank.has(it.id) ? el('span', { class: 'chip onhot', text: '热点榜第 ' + state.hotRank.get(it.id), title: '这条资讯所属事件正在当前热点榜上' }) : null,
       el('span', { text: (it.source && it.source.name) || '' }),
       el('time', { datetime: it.publishedAt, title: fullTime(it.publishedAt), 'data-ago': it.publishedAt, text: ago(it.publishedAt) }),
-      typeof it.score === 'number' ? el('span', { text: it.score + ' 分', title: 'AIHOT 评分' }) : null,
+      typeof it.score === 'number' ? el('span', { text: 'AI 评分 ' + it.score, title: 'AI 评分，满分 100' }) : null,
     );
     return el('article', { class: 'card' + (state.fresh.has(it.id) ? ' fresh' : '') },
       meta,
@@ -428,19 +442,51 @@
     );
   }
 
+  // 接口只给名次、不给热度值和趋势，所以名次变化由本地对比上一版榜单得出
+  const NEW_WINDOW = 6 * 3600 * 1000;
+  function hotKey(t) {
+    const m = /\/story\/([^/?#]+)/.exec((t.links && t.links.story) || '');
+    return m ? m[1] : t.id;               // 事件 id 比代表条目 id 稳定
+  }
+  function hotMovement(items) {
+    const keys = items.map(hotKey), now = Date.now();
+    let saved = store.get('hot', null);   // { cur: 当前榜单, prev: 上一版榜单, seen: 各事件首次上榜时间 }
+    if (!saved || !Array.isArray(saved.cur)) saved = { cur: keys, prev: null, seen: Object.fromEntries(keys.map(k => [k, 0])) };
+    else if (saved.cur.join() !== keys.join()) saved = { cur: keys, prev: saved.cur, seen: saved.seen || {} };
+    const seen = {};
+    for (const k of keys) seen[k] = k in saved.seen ? saved.seen[k] : now;
+    saved.seen = seen;
+    store.set('hot', saved);
+    return (key, rank) => {
+      if (seen[key] && now - seen[key] < NEW_WINDOW) return { cls: 'new', text: '新', title: '6 小时内新上榜' };
+      const was = saved.prev ? saved.prev.indexOf(key) + 1 : 0;
+      if (!was || was === rank) return null;
+      return was > rank ? { cls: 'up', text: '▲' + (was - rank), title: `上一版第 ${was}` } : { cls: 'down', text: '▼' + (rank - was), title: `上一版第 ${was}` };
+    };
+  }
+
   function renderHot(items) {
     $('hotAt').textContent = '更新于 ' + clock(Date.now());
     if (!items.length) { $('hot').replaceChildren(el('li', null, el('span'), el('span', { text: '暂无热点' }))); return; }
+    const move = hotMovement(items);
+    const maxPeople = Math.max(1, ...items.map(t => t.participantCount || 0));
     $('hot').replaceChildren(...items.map(t => {
       const l = t.links || {};
+      const mv = move(hotKey(t), t.rank);
+      const people = t.participantCount || 0;
       return el('li', null,
-        el('span', { class: 'rank', text: t.rank }),
+        el('div', null,
+          el('span', { class: 'rank', text: t.rank }),
+          mv ? el('span', { class: 'mv ' + mv.cls, text: mv.text, title: mv.title }) : null,
+        ),
         el('div', null,
           link(l.story || l.aihot || l.original, t.title),
           el('small', null,
+            (people ? people + ' 人讨论 · ' : ''),
             (t.sourceCount ? t.sourceCount + ' 个信源 · ' : ''),
             el('span', { 'data-ago': t.latestAt, text: ago(t.latestAt) }),
           ),
+          people ? el('div', { class: 'heat', title: `${people} 人参与讨论` }, el('i', { style: `width:${Math.round(people / maxPeople * 100)}%` })) : null,
         ),
       );
     }));
