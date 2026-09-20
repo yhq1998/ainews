@@ -127,6 +127,61 @@
   .scroller.on::-webkit-scrollbar { display: none; }
   .scroller.on .card.fresh { animation: none; }
 
+  /* 控件分组：桌面端只是透明包装，标签文字不显示 */
+  .field { display: contents; }
+  .lbl, .drawer-head, .overlay, .tabbar { display: none; }
+
+  /* ---------- 手机端 ---------- */
+  @media (max-width: 860px) {
+    :root { --bottom-h: calc(54px + env(safe-area-inset-bottom, 0px)); }
+    /* backdrop-filter 会让 fixed 子元素以顶栏为基准，抽屉就出不来了，手机端改用纯色 */
+    header { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--bg); }
+    .bar { padding: 8px 12px; gap: 8px; flex-wrap: nowrap; }
+    .brand { font-size: 16px; min-width: 0; white-space: nowrap; }
+    .status { overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 400; }
+    .status .long, .wide { display: none; }
+    .bar > .btn { width: 36px; padding: 0; flex: none; }
+
+    main { padding: 10px 12px calc(var(--bottom-h) + 12px); gap: 0; }
+    body[data-view="feed"] aside, body[data-view="hot"] .feedcol { display: none; }
+    aside .panel { position: static; max-height: none; overflow: visible; }
+    ol.hot li { font-size: 14.5px; padding: 10px 0; }
+    .scroller.on { height: calc(100vh - var(--header-h, 53px) - var(--bottom-h) - 20px); min-height: 240px; padding: 10px 0; }
+    @supports (height: 100dvh) { .scroller.on { height: calc(100dvh - var(--header-h, 53px) - var(--bottom-h) - 20px); } }
+    .card { padding: 12px 14px; }
+    .card h2 { font-size: 16px; }
+
+    .tabbar {
+      display: grid; grid-template-columns: repeat(3, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 9;
+      height: var(--bottom-h); padding-bottom: env(safe-area-inset-bottom, 0px);
+      background: var(--surface); border-top: 1px solid var(--line);
+    }
+    .tabbar button { position: relative; border: 0; background: none; color: var(--muted); font-size: 11.5px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .tabbar svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .tabbar button[aria-pressed="true"] { color: var(--accent); font-weight: 600; }
+    .badge { position: absolute; top: 5px; left: calc(50% + 6px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: #fff; font: 600 10.5px/16px sans-serif; font-style: normal; text-align: center; }
+    .badge.dot-only { min-width: 8px; width: 8px; height: 8px; padding: 0; top: 7px; left: calc(50% + 9px); }
+    .badge[hidden] { display: none; }
+
+    .overlay { display: block; position: fixed; inset: 0; z-index: 29; background: rgba(0,0,0,.4); opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .controls {
+      position: fixed; top: 0; right: 0; bottom: 0; z-index: 30; width: min(86vw, 340px);
+      flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 16px;
+      padding: 14px 16px calc(20px + env(safe-area-inset-bottom, 0px)); overflow-y: auto;
+      background: var(--bg); box-shadow: -10px 0 40px rgba(0,0,0,.2);
+      transform: translateX(105%); visibility: hidden; transition: transform .24s ease, visibility 0s .24s;
+    }
+    body.filters-open { overflow: hidden; }
+    body.filters-open .overlay { opacity: 1; pointer-events: auto; }
+    body.filters-open .controls { transform: none; visibility: visible; transition: transform .24s ease; }
+    .drawer-head { display: flex; justify-content: space-between; align-items: center; font-size: 16px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .lbl { display: block; font-size: 12.5px; color: var(--muted); }
+    .controls .seg { display: flex; }
+    .controls .seg button { flex: 1; padding: 7px 0; }
+    .controls select, .controls input[type="search"] { width: 100%; height: 40px; flex: none; font-size: 16px; }
+  }
+
   .empty { text-align: center; color: var(--muted); padding: 48px 0; }
   .more { display: block; margin: 14px auto 0; }
 </style>
@@ -135,38 +190,47 @@
 <header>
   <div class="bar">
     <div class="brand"><span class="dot" id="dot"></span>AI 动态 <span class="status" id="status">准备中…</span></div>
-    <button class="btn" id="refresh" title="立即刷新（快捷键 R）">↻ 刷新</button>
+    <button class="btn" id="refresh" title="立即刷新（快捷键 R）">↻<span class="wide"> 刷新</span></button>
     <button class="btn" id="theme" title="切换深浅色">◐</button>
-    <div class="controls">
+    <div class="overlay" id="overlay"></div>
+    <!-- 桌面端是顶栏里的一行控件；手机端同一份 DOM 变成右侧滑出的抽屉 -->
+    <div class="controls" id="controls">
+      <div class="drawer-head"><strong>筛选与设置</strong><button class="btn" id="closeFilters">完成</button></div>
+      <div class="field"><span class="lbl">内容范围</span>
       <div class="seg" id="mode">
         <button data-v="selected">精选</button>
         <button data-v="all">全部</button>
-      </div>
+      </div></div>
+      <div class="field"><span class="lbl">时间窗口</span>
       <div class="seg" id="window">
         <button data-v="24h">24 小时</button>
         <button data-v="7d">7 天</button>
-      </div>
-      <select id="category" aria-label="分类"></select>
-      <input type="search" id="q" placeholder="搜索关键词（至少 2 个字）" maxlength="200">
+      </div></div>
+      <label class="field"><span class="lbl">分类</span>
+      <select id="category" aria-label="分类"></select></label>
+      <label class="field"><span class="lbl">搜索</span>
+      <input type="search" id="q" placeholder="搜索关键词（至少 2 个字）" maxlength="200"></label>
+      <label class="field"><span class="lbl">自动刷新</span>
       <select id="interval" aria-label="自动刷新间隔">
         <option value="60">每 1 分钟刷新</option>
         <option value="300">每 5 分钟刷新</option>
         <option value="900">每 15 分钟刷新</option>
         <option value="1800">每 30 分钟刷新</option>
         <option value="0">不自动刷新</option>
-      </select>
+      </select></label>
+      <label class="field"><span class="lbl">滚动播报</span>
       <select id="speed" aria-label="滚动播报速度" title="鼠标悬停在卡片上会暂停滚动">
         <option value="0">滚动：关</option>
         <option value="15">滚动：慢</option>
         <option value="28">滚动：中</option>
         <option value="50">滚动：快</option>
-      </select>
+      </select></label>
     </div>
   </div>
 </header>
 
 <main>
-  <section>
+  <section class="feedcol">
     <button class="banner" id="banner"></button>
     <div class="error" id="error"></div>
     <div class="scroller" id="scroller">
@@ -183,6 +247,13 @@
     </div>
   </aside>
 </main>
+
+<!-- 仅手机端显示：资讯 / 热点榜 两个视图切换 + 打开筛选抽屉 -->
+<nav class="tabbar" id="tabbar">
+  <button data-view="feed"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>资讯<i class="badge" id="feedBadge" hidden></i></button>
+  <button data-view="hot"><svg viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.3 1.6 1 2.4 2 2.7-.6-3 .1-6 1-8.5Z"/></svg>热点榜</button>
+  <button id="openFilters"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>筛选<i class="badge dot-only" id="filterBadge" hidden></i></button>
+</nav>
 
 
 <script>
@@ -498,6 +569,8 @@
     b.classList.toggle('show', n > 0);
     b.textContent = n ? `有 ${n} 条新动态 · 点击标记为已读` : '';
     document.title = (n ? `(${n}) ` : '') + '瑞泊-AI动态';
+    $('feedBadge').hidden = !n; $('feedBadge').textContent = n > 99 ? '99+' : n;
+    $('filterBadge').hidden = !(state.category || state.q.length >= 2 || state.mode !== 'selected');
   }
 
   function showError(e) {
@@ -510,12 +583,14 @@
   function renderStatus() {
     const dot = $('dot');
     dot.className = 'dot ' + (state.loading ? 'busy' : state.error ? 'err' : state.nextAt ? 'live' : '');
-    let s = state.loading ? '刷新中…' : state.lastChecked ? `上次检查 ${clock(state.lastChecked)}` : '';
+    const checked = state.loading ? '刷新中…' : state.lastChecked ? `上次检查 ${clock(state.lastChecked)}` : '';
+    let next = '';
     if (!state.loading && state.nextAt) {
       const left = Math.max(0, Math.ceil((state.nextAt - Date.now()) / 1000));
-      s += ` · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} 后刷新`;
+      next = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} 后刷新`;
     }
-    $('status').textContent = s;
+    // 手机端顶栏窄，只留倒计时（.long 在窄屏隐藏）；刷新中 / 无倒计时的时候整句都显示
+    $('status').replaceChildren(next ? el('span', { class: 'long', text: checked + ' · ' }) : checked, next);
   }
 
   // ---------- wiring ----------
@@ -555,6 +630,23 @@
   new ResizeObserver(() => { setHeaderH(); ticker.sync(); }).observe(headerEl);
   addEventListener('resize', () => ticker.sync());
   setHeaderH();
+
+  // 手机端：底部标签栏切换 资讯 / 热点榜，筛选项在抽屉里
+  function setView(v) {
+    document.body.dataset.view = v; store.set('view', v);
+    $('tabbar').querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+    scrollTo(0, 0);
+    ticker.sync();                                // 资讯区从隐藏变为可见后要重新量高度
+  }
+  const setFilters = open => document.body.classList.toggle('filters-open', open);
+  $('tabbar').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.view) { setFilters(false); setView(b.dataset.view); } else setFilters(true);
+  });
+  $('overlay').addEventListener('click', () => setFilters(false));
+  $('closeFilters').addEventListener('click', () => setFilters(false));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setFilters(false); });
+  setView(store.get('view', 'feed') === 'hot' ? 'hot' : 'feed');
 
   let qTimer;
   $('q').addEventListener('input', e => {
