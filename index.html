@@ -147,6 +147,21 @@
   .scroller.on::-webkit-scrollbar { display: none; }
   .scroller.on .card.fresh { animation: none; }
 
+  /* 自绘下拉框：系统原生的 select 在 macOS 上会把菜单盖在控件正中间，这里统一从控件下方展开。
+     手机端仍用原生 select（系统自带的选择器更好用），见下方媒体查询 */
+  .dd { position: relative; flex: none; }
+  .dd select { display: none; }
+  .dd-btn { display: flex; align-items: center; gap: 6px; height: 34px; padding: 5px 8px 5px 10px; font-size: 14px; white-space: nowrap; cursor: pointer; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; }
+  .dd-btn:hover, .dd-btn[aria-expanded="true"] { border-color: var(--accent); }
+  .dd-btn svg { width: 14px; height: 14px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s; }
+  .dd-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .dd-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; min-width: 100%; margin: 0; padding: 4px; list-style: none; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.14); }
+  .dd-menu.right { left: auto; right: 0; }
+  .dd-menu li { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 6px 10px; border-radius: 6px; font-size: 14px; white-space: nowrap; cursor: pointer; outline: none; }
+  .dd-menu li:hover, .dd-menu li:focus { background: var(--surface-2); }
+  .dd-menu li[aria-selected="true"] { color: var(--accent); font-weight: 600; }
+  .dd-menu li[aria-selected="true"]::after { content: "✓"; font-size: 12px; }
+
   /* 窄一些的桌面窗口：收紧间距、隐藏倒计时文字（悬停状态点仍可看），尽量保持一行 */
   @media (min-width: 861px) and (max-width: 1100px) {
     .status { display: none; }
@@ -207,6 +222,8 @@
     .controls .seg { display: flex; }
     .controls .seg button { flex: 1; padding: 7px 0; }
     .controls select, .controls input[type="search"] { width: 100%; height: 40px; flex: none; font-size: 16px; }
+    .dd select { display: block; }
+    .dd-btn, .dd-menu { display: none; }
   }
 
   .empty { text-align: center; color: var(--muted); padding: 48px 0; }
@@ -686,6 +703,51 @@
     state.speed = Number(sp.value); store.set('speed', state.speed);
     if (wasOff || !state.speed) renderFeed();    // 开关切换才需要重建克隆；只换速度不打断当前位置
   });
+
+  // 桌面端把原生 select 换成自绘下拉：选中后回写 select 并派发 change，原有逻辑不用改
+  function enhanceSelect(sel, alignRight) {
+    const wrap = el('div', { class: 'dd' });
+    sel.replaceWith(wrap);
+    const label = el('span');
+    const btn = el('button', { type: 'button', class: 'dd-btn', 'aria-haspopup': 'listbox', 'aria-expanded': 'false', 'aria-label': sel.getAttribute('aria-label'), title: sel.title || null }, label);
+    btn.insertAdjacentHTML('beforeend', '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>');
+    const menu = el('ul', { class: 'dd-menu' + (alignRight ? ' right' : ''), role: 'listbox', hidden: '' });
+    for (const o of sel.options) menu.append(el('li', { role: 'option', tabindex: '-1', 'data-v': o.value, text: o.textContent }));
+    wrap.append(sel, btn, menu);
+
+    const items = () => [...menu.children];
+    const sync = () => {
+      label.textContent = sel.selectedOptions[0] ? sel.selectedOptions[0].textContent : '';
+      if (sel.getAttribute('aria-label')) btn.setAttribute('aria-label', sel.getAttribute('aria-label') + '：' + label.textContent);
+      items().forEach(li => li.setAttribute('aria-selected', String(li.dataset.v === sel.value)));
+    };
+    const open = show => {
+      if (show) document.querySelectorAll('.dd-menu:not([hidden])').forEach(m => { if (m !== menu) m.previousElementSibling.click(); });
+      menu.hidden = !show; btn.setAttribute('aria-expanded', String(show));
+      if (show) (menu.querySelector('[aria-selected="true"]') || menu.firstElementChild).focus();
+    };
+    const choose = li => {
+      if (sel.value !== li.dataset.v) { sel.value = li.dataset.v; sel.dispatchEvent(new Event('change', { bubbles: true })); }
+      sync(); open(false); btn.focus();
+    };
+    btn.addEventListener('click', () => open(menu.hidden));
+    menu.addEventListener('click', e => { const li = e.target.closest('li'); if (li) choose(li); });
+    wrap.addEventListener('keydown', e => {
+      const list = items(), i = list.indexOf(document.activeElement);
+      if (e.key === 'Escape' && !menu.hidden) { e.stopPropagation(); open(false); btn.focus(); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (menu.hidden) open(true); else list[(i + (e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length].focus();
+      } else if ((e.key === 'Enter' || e.key === ' ') && i >= 0) { e.preventDefault(); choose(list[i]); }
+      else if (e.key === 'Tab') open(false);
+    });
+    document.addEventListener('click', e => { if (!menu.hidden && !wrap.contains(e.target)) open(false); });
+    sel.addEventListener('change', sync);
+    sync();
+  }
+  enhanceSelect(cat);
+  enhanceSelect(iv, true);
+  enhanceSelect(sp, true);
 
   // 顶栏会随宽度换行，把实际高度交给 CSS 计算滚动视窗和侧栏的位置
   const headerEl = document.querySelector('header');
