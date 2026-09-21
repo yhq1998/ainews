@@ -78,12 +78,6 @@
   main { max-width: 1120px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
   @media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } aside { order: -1; } }
 
-  .banner {
-    display: none; width: 100%; margin-bottom: 12px; padding: 9px 14px; border-radius: 10px; cursor: pointer;
-    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft); color: var(--accent);
-    font-weight: 600; font-size: 14px; text-align: center;
-  }
-  .banner.show { display: block; }
   .error { display: none; margin-bottom: 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--err) 40%, transparent); color: var(--err); font-size: 14px; word-break: break-word; }
   .error.show { display: block; }
 
@@ -333,7 +327,6 @@
 
 <main>
   <section class="feedcol">
-    <button class="banner" id="banner"></button>
     <div class="error" id="error"></div>
     <div class="scroller" id="scroller">
       <div id="feed"><div class="empty">加载中…</div></div>
@@ -367,6 +360,7 @@
   const MIN_INTERVAL = 60;
   // 滚动播报时自动把后面的分页都拉进来；「全部」模式 7 天内可能有上千条，设个上限免得页面过重
   const AUTO_LOAD_CAP = 300;
+  const FRESH_TTL = 30 * 60 * 1000;   // 新条目的 NEW 标记保留 30 分钟
   const CATEGORIES = { '': '全部分类', 'ai-models': '模型', 'ai-products': '产品', 'industry': '行业', 'paper': '论文', 'tip': '技巧' };
 
   const store = {
@@ -385,7 +379,7 @@
     items: [], nextCursor: null,
     feedUrl: '', feedEtag: null, hotEtag: null,
     known: null,          // 当前查询下已见过的条目 id；null 表示还没有基线
-    fresh: new Set(),     // 尚未标记已读的新条目
+    fresh: new Map(),     // 新条目 id → 发现时间；NEW 标记保留 FRESH_TTL 后自动消失
     resets: null, resetsEtag: null,   // Tibo 重置 / 发卡日历的事件列表
     tibo: { month: null, sel: null }, // 日历卡片当前看的月份和选中的日期；null 表示跟随默认焦点
     hotRank: new Map(),   // 条目 id → 当前热点榜名次，用来在资讯卡片上打「热点」标记
@@ -458,10 +452,10 @@
     if (!sameQuery || !state.known) {
       // 新查询：以这一页为基线。若上次关闭页面时是同一查询，则把期间新增的标出来
       const saved = store.get('seen', null);
-      state.fresh = new Set();
+      state.fresh = new Map();
       if (saved && saved.key === key) {
         const seen = new Set(saved.ids);
-        for (const it of page) if (!seen.has(it.id)) state.fresh.add(it.id);
+        for (const it of page) if (!seen.has(it.id)) state.fresh.set(it.id, Date.now());
       }
       state.known = new Set(page.map(i => i.id));
       state.items = page;
@@ -469,7 +463,7 @@
       state.nextCursor = r.data.page && r.data.page.hasMore ? r.data.page.nextCursor : null;
     } else {
       let added = 0;
-      for (const it of page) if (!state.known.has(it.id)) { state.known.add(it.id); state.fresh.add(it.id); added++; }
+      for (const it of page) if (!state.known.has(it.id)) { state.known.add(it.id); state.fresh.set(it.id, Date.now()); added++; }
       if (added) ticker.rewind();                // 有新动态：滚动播报回到开头，先播新的
       // 第一页换成最新内容，保留用户已经“加载更多”翻出来的旧条目
       const ids = new Set(page.map(i => i.id));
@@ -561,7 +555,7 @@
   }
 
   function resetQuery() {
-    state.known = null; state.feedEtag = null; state.feedUrl = ''; state.fresh = new Set();
+    state.known = null; state.feedEtag = null; state.feedUrl = ''; state.fresh = new Map();
     state.items = []; state.nextCursor = null; state.more = 'idle'; state.moreError = null;
     $('feed').replaceChildren(el('div', { class: 'empty', text: '加载中…' }));
     ticker.sync(); ticker.rewind();
@@ -797,7 +791,7 @@
       el('time', { datetime: it.publishedAt, title: fullTime(it.publishedAt), 'data-ago': it.publishedAt, text: ago(it.publishedAt) }),
       typeof it.score === 'number' ? el('span', { text: 'AI 评分 ' + it.score, title: 'AI 评分，满分 100' }) : null,
     );
-    return el('article', { class: 'card' + (state.fresh.has(it.id) ? ' fresh' : '') },
+    return el('article', { class: 'card' + (state.fresh.has(it.id) ? ' fresh' : ''), 'data-id': it.id },
       meta,
       el('h2', null, link(links.original || links.aihot, it.title || it.originalTitle || '(无标题)')),
       it.summary ? el('p', { text: it.summary }) : null,
@@ -857,11 +851,18 @@
     }));
   }
 
+  // NEW 标记到期：只摘掉对应卡片的样式，不重绘列表，滚动位置不受影响
+  function expireFresh() {
+    const now = Date.now(); let changed = false;
+    for (const [id, t] of state.fresh) if (now - t > FRESH_TTL) {
+      state.fresh.delete(id); changed = true;
+      document.querySelectorAll(`#scroller .card[data-id="${CSS.escape(id)}"]`).forEach(n => n.classList.remove('fresh'));
+    }
+    if (changed) renderBanner();
+  }
+
   function renderBanner() {
     const n = state.fresh.size;
-    const b = $('banner');
-    b.classList.toggle('show', n > 0);
-    b.textContent = n ? `有 ${n} 条新动态 · 点击标记为已读` : '';
     document.title = (n ? `(${n}) ` : '') + '瑞泊-AI动态';
     $('feedBadge').hidden = !n; $('feedBadge').textContent = n > 99 ? '99+' : n;
     $('filterBadge').hidden = !(state.category || state.q.length >= 2 || state.mode !== 'selected');
@@ -1003,7 +1004,6 @@
 
   $('refresh').addEventListener('click', refresh);
   $('scroller').addEventListener('click', e => { if (onTiboClick(e)) return; if (e.target.closest('[data-more]')) loadMore(); });
-  $('banner').addEventListener('click', () => { state.fresh.clear(); renderFeed(); });
   document.addEventListener('keydown', e => {
     if (e.key.toLowerCase() === 'r' && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) refresh();
   });
@@ -1025,6 +1025,7 @@
   setInterval(() => {
     document.querySelectorAll('[data-ago]').forEach(n => { n.textContent = ago(n.dataset.ago); });
     document.querySelectorAll('[data-until]').forEach(n => { n.textContent = untilText(n.dataset.until); });
+    expireFresh();
   }, 30000);
 
   refresh();
