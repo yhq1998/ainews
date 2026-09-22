@@ -65,6 +65,15 @@
   .bar { max-width: 1120px; margin: 0 auto; padding: 10px 16px; display: flex; gap: 8px; align-items: center; }
   .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; margin-right: 6px; white-space: nowrap; flex: none; }
   .bar > .btn { order: 2; width: 36px; padding: 0; flex: none; }
+  /* 安装按钮：橙色描边，带文字，比其他图标按钮醒目 */
+  .bar > .btn.install { width: auto; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; color: var(--accent); border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: var(--accent-soft); font-weight: 600; white-space: nowrap; }
+  .btn.install svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .steps { list-style: none; margin: 14px 0 0; padding: 0; counter-reset: st; }
+  .steps li { position: relative; padding: 0 0 14px 40px; font-size: 15px; line-height: 1.6; counter-increment: st; }
+  .steps li::before { content: counter(st); position: absolute; left: 0; top: 1px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+  .steps kbd { font: inherit; font-weight: 600; background: var(--surface-2); border-radius: 5px; padding: 1px 7px; white-space: nowrap; }
+  .steps svg { width: 18px; height: 18px; vertical-align: -4px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .install-note { margin: 4px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
   .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
   .dot.live { background: var(--ok); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent); animation: pulse 2s infinite; }
   .dot.busy { background: var(--accent); }
@@ -352,6 +361,7 @@
 <header>
   <div class="bar">
     <div class="brand"><span class="dot" id="dot"></span>AI 动态 <span class="status" id="status">准备中…</span></div>
+    <button class="btn install" id="install" hidden title="安装到手机 / 电脑桌面"><svg viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M12 7v7M9.5 11.5 12 14l2.5-2.5M10 18h4"/></svg><span>安装</span></button>
     <button class="btn" id="refresh" title="立即刷新（快捷键 R）">↻</button>
     <button class="btn" id="theme" title="切换深浅色">◐</button>
     <div class="overlay" id="overlay"></div>
@@ -1172,7 +1182,61 @@
     });
     $('rdClose').addEventListener('click', () => close());
     $('rdOverlay').addEventListener('click', () => close());
-    return { close };
+    return { close, show: open };
+  })();
+
+  // ---------- 安装到桌面 ----------
+  // Android / 桌面 Chrome：浏览器给 beforeinstallprompt 事件，按钮直接拉起系统安装框；
+  // iOS Safari 和其他浏览器没有这个 API，按钮改为弹出图文步骤。已安装（独立窗口运行）则不显示按钮
+  const install = (() => {
+    const btn = $('install');
+    const ua = navigator.userAgent;
+    const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    const isIOS = /iPhone|iPad|iPod/.test(ua) || (!/Android/i.test(ua) && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const inWeChat = /MicroMessenger/i.test(ua);
+    const isMobile = isIOS || /Android/i.test(ua);
+    let prompt = null;
+    const share = '<svg viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg>';
+    const dots = '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';
+    const li = html => { const n = el('li'); n.innerHTML = html; return n; };   // 只放自己写的静态文案
+    function guideNodes() {
+      const items = [];
+      if (inWeChat) items.push(li(`微信里无法安装。先点右上角 ${dots} → <kbd>${isIOS ? '在 Safari 中打开' : '在浏览器打开'}</kbd>`));
+      if (isIOS) {
+        items.push(li('确认是用 <kbd>Safari</kbd> 打开本页（其他浏览器没有这个选项）'));
+        items.push(li(`点底部工具栏中间的 <kbd>${share} 分享</kbd> 按钮`));
+        items.push(li('往下找到并点 <kbd>添加到主屏幕</kbd>'));
+        items.push(li('点右上角 <kbd>添加</kbd>，桌面上就会出现「AI动态」图标'));
+      } else if (isMobile) {
+        items.push(li('建议用 <kbd>Chrome</kbd> 或 <kbd>Edge</kbd> 打开本页'));
+        items.push(li(`点右上角 ${dots} 菜单`));
+        items.push(li('选 <kbd>安装应用</kbd> 或 <kbd>添加到主屏幕</kbd>，再点确认'));
+      } else {
+        items.push(li('用 <kbd>Chrome</kbd> 或 <kbd>Edge</kbd> 打开本页，地址栏右侧会出现「安装」图标'));
+        items.push(li('点它并确认，即可作为独立窗口的应用打开'));
+      }
+      return [
+        el('h2', { text: '安装到' + (isMobile ? '手机桌面' : '电脑') }),
+        el('p', { class: 'install-note', text: '安装后有独立图标、全屏打开，不占存储空间，内容自动保持最新。' }),
+        el('ol', { class: 'steps' }, ...items),
+        isMobile && !isIOS ? el('p', { class: 'install-note', text: '部分国产手机自带浏览器菜单里叫「添加到桌面」，效果相同。' }) : null,
+      ];
+    }
+    addEventListener('beforeinstallprompt', e => { e.preventDefault(); prompt = e; btn.hidden = false; });
+    addEventListener('appinstalled', () => { prompt = null; btn.hidden = true; });
+    btn.addEventListener('click', async () => {
+      if (prompt) {
+        prompt.prompt();
+        const { outcome } = await prompt.userChoice;
+        if (outcome === 'accepted') btn.hidden = true;
+        prompt = null;
+        return;
+      }
+      reader.show('安装应用', guideNodes());
+    });
+    // 没有安装 API 的环境（iOS、微信、其他浏览器）也显示按钮，点开是步骤说明
+    if (!standalone) btn.hidden = false;
+    return { guideNodes };
   })();
 
   const setFilters = open => document.body.classList.toggle('filters-open', open);
