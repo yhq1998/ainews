@@ -1188,8 +1188,13 @@
   // ---------- 安装到桌面 ----------
   // Android / 桌面 Chrome：浏览器给 beforeinstallprompt 事件，按钮直接拉起系统安装框；
   // iOS Safari 和其他浏览器没有这个 API，按钮改为弹出图文步骤。已安装（独立窗口运行）则不显示按钮
+  // 原生安装包：Android 直接下载 APK；iOS 走 TestFlight（链接为空表示尚未提供）
+  const APK_URL = '/download/ainews.apk';
+  const TESTFLIGHT_URL = '';
   const install = (() => {
     const btn = $('install');
+    // 已经在原生 App 里运行时不需要这个按钮
+    if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) { btn.remove(); return {}; }
     const ua = navigator.userAgent;
     const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
     const isIOS = /iPhone|iPad|iPod/.test(ua) || (!/Android/i.test(ua) && navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1215,9 +1220,13 @@
         items.push(li('用 <kbd>Chrome</kbd> 或 <kbd>Edge</kbd> 打开本页，地址栏右侧会出现「安装」图标'));
         items.push(li('点它并确认，即可作为独立窗口的应用打开'));
       }
+      // 有原生安装包的平台：先给下载按钮，浏览器安装方式作为备选
+      const native = isIOS ? (TESTFLIGHT_URL && link(TESTFLIGHT_URL, '通过 TestFlight 安装 ↗', 'btn primary')) : (isMobile && APK_URL && el('a', { href: APK_URL, class: 'btn primary', download: 'ainews.apk', text: '下载 Android 安装包（.apk）' }));
       return [
-        el('h2', { text: '安装到' + (isMobile ? '手机桌面' : '电脑') }),
-        el('p', { class: 'install-note', text: '安装后有独立图标、全屏打开，不占存储空间，内容自动保持最新。' }),
+        el('h2', { text: '安装到' + (isMobile ? '手机' : '电脑') }),
+        native ? el('div', { class: 'rd-act', style: 'margin-top:12px' }, native) : null,
+        native ? el('p', { class: 'install-note', text: isIOS ? '需要先安装苹果的 TestFlight 应用，打开链接后点「安装」即可。' : (inWeChat ? '微信里点下载可能没反应：请点右上角 ··· → 在浏览器打开，再下载。' : '下载后打开安装；首次安装系统会询问是否允许安装此来源的应用，选允许即可。') }) : null,
+        el('p', { class: 'install-note', style: native ? 'margin-top:18px;font-weight:600;color:var(--text)' : '', text: native ? '不想装安装包？也可以把网页添加到桌面，效果相近：' : '安装后有独立图标、全屏打开，不占存储空间，内容自动保持最新。' }),
         el('ol', { class: 'steps' }, ...items),
         isMobile && !isIOS ? el('p', { class: 'install-note', text: '部分国产手机自带浏览器菜单里叫「添加到桌面」，效果相同。' }) : null,
       ];

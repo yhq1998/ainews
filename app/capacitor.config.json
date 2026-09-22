@@ -1,0 +1,11 @@
+{
+  "appId": "com.omniapexroute.ainews",
+  "appName": "AI动态",
+  "webDir": "www",
+  "server": {
+    "url": "https://ainews.omniapexroute.com",
+    "cleartext": false
+  },
+  "android": { "allowMixedContent": false, "backgroundColor": "#f6f5f1" },
+  "ios": { "contentInset": "automatic", "backgroundColor": "#f6f5f1" }
+}
