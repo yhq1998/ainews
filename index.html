@@ -191,6 +191,44 @@
     .tibo-info { max-height: none; }
     .day { height: 40px; }
   }
+  /* 站内阅读面板：桌面端从右侧滑出，手机端全屏 */
+  .card h2 a, ol.hot li > div > a.t { cursor: pointer; }
+  .rd-overlay { position: fixed; inset: 0; z-index: 39; background: rgba(0,0,0,.42); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .reader { position: fixed; top: 0; right: 0; bottom: 0; z-index: 40; width: min(100vw, 600px); background: var(--bg); box-shadow: -12px 0 40px rgba(0,0,0,.22); display: flex; flex-direction: column; transform: translateX(105%); visibility: hidden; transition: transform .26s ease, visibility 0s .26s; }
+  body.reader-open { overflow: hidden; }
+  body.reader-open .rd-overlay { opacity: 1; pointer-events: auto; }
+  body.reader-open .reader { transform: none; visibility: visible; transition: transform .26s ease; }
+  .rd-bar { display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px 18px; border-bottom: 1px solid var(--line); background: var(--surface); flex: none; }
+  .rd-bar .kind { font-size: 13px; font-weight: 700; color: var(--muted); margin-right: auto; }
+  .rd-bar .btn { width: 36px; padding: 0; font-size: 18px; }
+  .rd-body { flex: 1; overflow-y: auto; padding: 18px 20px calc(24px + env(safe-area-inset-bottom, 0px)); overscroll-behavior: contain; }
+  .rd-body h2 { margin: 8px 0 6px; font-size: 21px; line-height: 1.4; font-weight: 750; }
+  .rd-orig { margin: 0 0 10px; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+  .rd-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; color: var(--muted); font-size: 13px; }
+  .rd-sec { margin-top: 20px; }
+  .rd-sec h3 { margin: 0 0 6px; font-size: 12.5px; font-weight: 700; letter-spacing: .06em; color: var(--accent); }
+  .rd-sec p { margin: 0; font-size: 15.5px; line-height: 1.75; }
+  .rd-sec .note { color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .rd-act { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+  .rd-act .primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; padding: 0 18px; }
+  .rd-act .primary:hover { filter: brightness(1.08); color: #fff; }
+  .rd-stat { display: flex; gap: 18px; margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+  .rd-stat b { display: block; font-size: 18px; color: var(--text); }
+  .tl { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); }
+  .tl li { position: relative; padding: 0 0 16px 14px; }
+  .tl li::before { content: ""; position: absolute; left: -19px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--line); border: 2px solid var(--bg); }
+  .tl li:first-child::before { background: var(--accent); }
+  .tl .when { font-size: 12px; color: var(--muted); }
+  .tl h4 { margin: 2px 0 4px; font-size: 14.5px; line-height: 1.45; font-weight: 600; }
+  .tl p { margin: 0; font-size: 13.5px; line-height: 1.6; color: color-mix(in srgb, var(--text) 85%, var(--muted)); }
+  .tl .src { margin-top: 4px; font-size: 12.5px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+  .tl .src a { border-bottom: 1px dotted currentColor; }
+  .rel { list-style: none; margin: 0; padding: 0; }
+  .rel li { padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .rel li:first-child { border-top: 0; }
+  .rel small { display: block; color: var(--muted); font-size: 12px; }
+  .rel a { cursor: pointer; }
+  .rd-loading { color: var(--muted); font-size: 13.5px; }
   .chip.onhot { background: var(--accent); color: #fff; font-weight: 600; }
 
   /* 滚动播报：固定高度的视窗，内容由脚本匀速上移，首尾用一份克隆无缝衔接 */
@@ -255,7 +293,7 @@
     .status { overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 400; }
 
     main { padding: 10px 12px calc(var(--bottom-h) + 12px); gap: 0; }
-    body[data-view="feed"] aside, body[data-view="hot"] .feedcol { display: none; }
+    body[data-view="feed"] main > aside, body[data-view="hot"] .feedcol { display: none; }
     aside .panel { position: static; max-height: none; overflow: visible; }
     ol.hot li { font-size: 15px; padding: 12px 14px; }
     .hot-head { position: static; }
@@ -371,6 +409,12 @@
 </main>
 
 <!-- 仅手机端显示：资讯 / 热点榜 两个视图切换 + 打开筛选抽屉 -->
+<div class="rd-overlay" id="rdOverlay"></div>
+<aside class="reader" id="reader" role="dialog" aria-modal="true" aria-label="阅读">
+  <div class="rd-bar"><span class="kind" id="rdKind"></span><button class="btn" id="rdClose" title="关闭（Esc）" aria-label="关闭">×</button></div>
+  <div class="rd-body" id="rdBody"></div>
+</aside>
+
 <nav class="tabbar" id="tabbar">
   <button data-view="feed"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>资讯<i class="badge" id="feedBadge" hidden></i></button>
   <button data-view="hot"><svg viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4.2.3 1.6 1 2.4 2 2.7-.6-3 .1-6 1-8.5Z"/></svg>热点榜</button>
@@ -408,6 +452,8 @@
     fresh: new Map(),     // 新条目 id → 发现时间；NEW 标记保留 FRESH_TTL 后自动消失
     resets: null, resetsEtag: null,   // Tibo 重置 / 发卡日历的事件列表
     tibo: { month: null, sel: null }, // 日历卡片当前看的月份和选中的日期；null 表示跟随默认焦点
+    readerOpen: false,
+    storyCache: new Map(),   // publicId → 事件详情（含 etag），面板打开时按需拉取
     hotRank: new Map(),   // 条目 id → 当前热点榜名次，用来在资讯卡片上打「热点」标记
     more: 'idle', moreError: null,   // 「加载更多」的状态：idle / loading / error
     nextAt: 0, loading: false, lastChecked: 0, error: null,
@@ -550,6 +596,7 @@
     state.hotEtag = r.etag;
     const items = r.data.items || [];
     state.hotRank = new Map(items.map(t => [t.id, t.rank]));
+    state.hotStory = new Map(items.map(t => [t.id, storyId(t)]));   // 条目 id → 事件 publicId
     renderHot(items);
     if (state.items.length) renderFeed();
   }
@@ -623,7 +670,7 @@
 
     function frame(t) {
       const dt = Math.min(100, t - last); last = t;
-      const paused = hover || kbFocus || Date.now() < touchUntil;
+      const paused = hover || kbFocus || state.readerOpen || Date.now() < touchUntil;
       if (state.speed && !clone.hidden) {
         // 用户用滚轮/触摸自己滚过：以实际位置为准接着播
         if (paused || Math.abs(scroller.scrollTop - pos) > 2) pos = scroller.scrollTop;
@@ -820,18 +867,18 @@
     );
     return el('article', { class: 'card' + (state.fresh.has(it.id) ? ' fresh' : ''), 'data-id': it.id },
       meta,
-      el('h2', null, link(links.original || links.aihot, it.title || it.originalTitle || '(无标题)')),
+      el('h2', null, el('a', { href: '#read', 'data-open-item': it.id, text: it.title || it.originalTitle || '(无标题)' })),
       it.summary ? el('p', { text: it.summary }) : null,
       it.reason ? el('p', { class: 'reason', text: it.reason }) : null,
       el('div', { class: 'links' },
         links.original ? link(links.original, '原文 ↗') : null,
-        links.aihot ? link(links.aihot, 'AIHOT 阅读页') : null,
       ),
     );
   }
 
   // 接口只给名次、不给热度值和趋势，所以名次变化由本地对比上一版榜单得出
   const NEW_WINDOW = 6 * 3600 * 1000;
+  const storyId = t => { const m = /\/story\/([^/?#]+)/.exec((t.links && t.links.story) || ''); return m ? m[1] : null; };
   function hotKey(t) {
     const m = /\/story\/([^/?#]+)/.exec((t.links && t.links.story) || '');
     return m ? m[1] : t.id;               // 事件 id 比代表条目 id 稳定
@@ -865,7 +912,7 @@
       return el('li', { class: t.rank === 1 ? 'top first' : t.rank <= 3 ? 'top' : null },
         el('span', { class: 'rank', text: String(t.rank).padStart(2, '0') }),
         el('div', null,
-          link(l.story || l.aihot || l.original, t.title),
+          storyId(t) ? el('a', { class: 't', href: '#read', 'data-open-story': storyId(t), text: t.title }) : link(l.original, t.title),
           el('small', null,
             mv ? el('span', { class: 'mv ' + mv.cls, text: mv.text, title: mv.title }) : null,
             people ? el('span', null, el('b', { text: people }), ' 方讨论') : null,
@@ -1021,6 +1068,110 @@
     else scrollerEl.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
+  // ---------- 站内阅读面板 ----------
+  const reader = (() => {
+    const body = $('rdBody'), kind = $('rdKind');
+    let token = 0;                                   // 防止慢请求把后打开的内容覆盖掉
+    function open(kindText, nodes) {
+      kind.textContent = kindText;
+      body.replaceChildren(...nodes);
+      body.scrollTop = 0;
+      if (!state.readerOpen) { state.readerOpen = true; document.body.classList.add('reader-open'); history.pushState({ reader: 1 }, ''); }
+      $('rdClose').focus();
+    }
+    function close(viaHistory) {
+      if (!state.readerOpen) return;
+      state.readerOpen = false; document.body.classList.remove('reader-open'); token++;
+      if (!viaHistory && history.state && history.state.reader) history.back();
+    }
+    addEventListener('popstate', () => close(true));
+
+    const section = (title, ...kids) => el('div', { class: 'rd-sec' }, el('h3', { text: title }), ...kids);
+    const actions = (...links) => el('div', { class: 'rd-act' }, ...links);
+    const primary = (href, text) => { const a = link(href, text, 'btn primary'); return a.tagName === 'A' ? a : null; };
+
+    async function story(publicId) {
+      const hit = state.storyCache.get(publicId);
+      const r = await api('/stories/' + encodeURIComponent(publicId), null, hit && hit.etag);
+      if (r.notModified) return hit.data;
+      state.storyCache.set(publicId, { data: r.data.story, etag: r.etag });
+      return r.data.story;
+    }
+    function timeline(reports) {
+      return el('ol', { class: 'tl' }, ...reports.map(rp => el('li', null,
+        el('div', { class: 'when', text: fullTime(rp.publishedAt) + ' · ' + ago(rp.publishedAt) }),
+        el('h4', { text: rp.title }),
+        rp.summary ? el('p', { text: rp.summary }) : null,
+        el('div', { class: 'src' }, el('span', { text: (rp.source && rp.source.name) || '' }), rp.links && rp.links.original ? link(rp.links.original, '原文 ↗') : null),
+      )));
+    }
+    function storyNodes(st) {
+      const neighbors = (st.storyline || []).concat(st.related || []);
+      return [
+        el('div', { class: 'rd-meta' },
+          el('span', { class: 'st ' + (st.status === 'settled' ? 'kind' : 'announced'), text: st.status === 'settled' ? '已平息' : '持续更新中' }),
+          el('span', { text: '首报 ' + fullTime(st.firstReportAt) }), el('span', { text: '· 最新 ' + ago(st.latestAt) }),
+        ),
+        el('h2', { text: st.title }),
+        el('div', { class: 'rd-stat' }, el('span', null, el('b', { text: st.sourceCount || 0 }), '家报道来源'), el('span', null, el('b', { text: st.reportCount || (st.reports || []).length }), '条报道')),
+        st.digest ? section('AI 事件综述', el('p', { text: st.digest }), st.digestUpdatedAt ? el('p', { class: 'note', text: '综述更新于 ' + fullTime(st.digestUpdatedAt) }) : null) : null,
+        st.latest && !st.digest ? section('最新进展', el('p', { text: st.latest })) : null,
+        section('报道时间线', (st.reports || []).length ? timeline(st.reports) : el('p', { class: 'note', text: '暂无报道' })),
+        neighbors.length ? section('相关事件', el('ul', { class: 'rel' }, ...neighbors.map(n => el('li', null,
+          el('a', { href: '#read', 'data-open-story': n.publicId, text: n.title }), el('small', { text: n.relation || '' }))))) : null,
+      ];
+    }
+
+    async function openItem(id) {
+      const it = state.items.find(i => i.id === id); if (!it) return;
+      const l = it.links || {}, rank = state.hotRank.get(id), pid = state.hotStory && state.hotStory.get(id);
+      const my = ++token;
+      const storyBox = pid ? el('div', { class: 'rd-sec' }, el('h3', { text: '热点事件' }), el('p', { class: 'rd-loading', text: '正在加载事件综述与报道时间线…' })) : null;
+      open(CATEGORIES[it.category] ? CATEGORIES[it.category] + ' · 资讯' : '资讯', [
+        el('div', { class: 'rd-meta' },
+          it.category ? el('span', { class: 'chip', 'data-cat': it.category, text: CATEGORIES[it.category] || it.category }) : null,
+          rank ? el('span', { class: 'chip onhot', text: '热点榜第 ' + rank }) : null,
+          it.selected ? el('span', { class: 'chip star', text: '精选' }) : null,
+          typeof it.score === 'number' ? el('span', { text: 'AI 评分 ' + it.score + ' / 100' }) : null,
+        ),
+        el('h2', { text: it.title || it.originalTitle || '(无标题)' }),
+        it.originalTitle && it.originalTitle !== it.title ? el('p', { class: 'rd-orig', text: it.originalTitle }) : null,
+        el('div', { class: 'rd-meta' }, el('span', { text: (it.source && it.source.name) || '' }), el('span', { text: '· ' + fullTime(it.publishedAt) }), el('span', { text: '· ' + ago(it.publishedAt) })),
+        it.summary ? section('AI 导读', el('p', { text: it.summary })) : null,
+        it.reason ? section('推荐理由', el('p', { text: it.reason })) : null,
+        actions(primary(l.original, '查看原文 ↗')),
+        el('p', { class: 'note', style: 'margin-top:14px', text: '导读与推荐理由由 AI 生成，引用数字、政策或原话前请以原文为准。' }),
+        storyBox,
+      ]);
+      if (!pid) return;
+      try {
+        const st = await story(pid);
+        if (my !== token) return;
+        storyBox.replaceChildren(el('h3', { text: '热点事件 · ' + st.title }),
+          st.digest ? el('p', { text: st.digest }) : (st.latest ? el('p', { text: st.latest }) : null),
+          el('div', { class: 'rd-act', style: 'margin-top:12px' }, el('a', { href: '#read', class: 'btn', 'data-open-story': pid, text: `查看事件全貌（${st.reportCount || (st.reports || []).length} 条报道）` })));
+      } catch (e) { if (my === token) storyBox.replaceChildren(el('p', { class: 'note', text: '事件详情加载失败：' + e.message })); }
+    }
+    async function openStory(pid) {
+      const my = ++token;
+      open('热点事件', [el('p', { class: 'rd-loading', text: '正在加载事件详情…' })]);
+      try {
+        const st = await story(pid);
+        if (my !== token) return;
+        body.replaceChildren(...storyNodes(st));
+        body.scrollTop = 0;
+      } catch (e) { if (my === token) body.replaceChildren(el('p', { class: 'note', text: '加载失败：' + e.message })); }
+    }
+    document.addEventListener('click', e => {
+      const a = e.target.closest('[data-open-item], [data-open-story]'); if (!a) return;
+      e.preventDefault();
+      if (a.dataset.openItem) openItem(a.dataset.openItem); else openStory(a.dataset.openStory);
+    });
+    $('rdClose').addEventListener('click', () => close());
+    $('rdOverlay').addEventListener('click', () => close());
+    return { close };
+  })();
+
   const setFilters = open => document.body.classList.toggle('filters-open', open);
   $('tabbar').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
@@ -1028,7 +1179,7 @@
   });
   $('overlay').addEventListener('click', () => setFilters(false));
   $('closeFilters').addEventListener('click', () => setFilters(false));
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') setFilters(false); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (state.readerOpen) reader.close(); else setFilters(false); } });
   setView(store.get('view', 'feed') === 'hot' ? 'hot' : 'feed');
 
   let qTimer;
