@@ -192,6 +192,20 @@
   }
   .scroller.on::-webkit-scrollbar { display: none; }
   .scroller.on .card.fresh { animation: none; }
+  /* 滚动关闭时（桌面端）：和右侧热点榜一样是固定高度的滚动区，带细滚动条，页面本身不再无限拉长 */
+  @media (min-width: 861px) {
+    .scroller.paged { height: calc(100vh - var(--header-h, 110px) - 32px); min-height: 360px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent; padding-right: 6px; }
+    .scroller.paged::-webkit-scrollbar { width: 8px; }
+    .scroller.paged::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--muted) 45%, transparent); border-radius: 4px; }
+    .scroller.paged .card:last-of-type { margin-bottom: 0; }
+  }
+  /* 回到顶部：放在滚动内容末尾并 sticky 到底部，滚动区和整页滚动两种模式都能用 */
+  .totop-wrap { position: sticky; bottom: 12px; height: 0; display: flex; justify-content: flex-end; pointer-events: none; z-index: 5; }
+  .totop { pointer-events: auto; transform: translateY(-100%); margin-right: 10px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--text); box-shadow: 0 4px 16px rgba(0,0,0,.14); cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: opacity .2s, visibility 0s .2s; }
+  .totop svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .totop:hover { border-color: var(--accent); color: var(--accent); }
+  .totop.show { opacity: 1; visibility: visible; transition: opacity .2s; }
+  @media (max-width: 860px) { .totop-wrap { bottom: calc(var(--bottom-h) + 12px); } .totop { margin-right: 0; } }
 
   /* 自绘下拉框：系统原生的 select 在 macOS 上会把菜单盖在控件正中间，这里统一从控件下方展开。
      手机端仍用原生 select（系统自带的选择器更好用），见下方媒体查询 */
@@ -331,6 +345,7 @@
     <div class="scroller" id="scroller">
       <div id="feed"><div class="empty">加载中…</div></div>
       <div id="feedClone" aria-hidden="true" hidden></div>
+      <div class="totop-wrap"><button class="totop" id="totop" title="回到顶部" aria-label="回到顶部"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div>
     </div>
   </section>
   <aside>
@@ -583,6 +598,7 @@
     // 内容比视窗高才需要循环：在末尾接一份克隆，滚过一整份后把位置减回去，视觉上无缝
     function sync() {
       scroller.classList.toggle('on', state.speed > 0);
+      scroller.classList.toggle('paged', !(state.speed > 0));
       clone.replaceChildren();
       clone.hidden = true;
       if (!state.speed || !state.items.length) return;
@@ -981,6 +997,19 @@
     scrollTo(0, 0);
     ticker.sync();                                // 资讯区从隐藏变为可见后要重新量高度
   }
+  // 回到顶部：桌面端滚的是 #scroller，手机端滚的是整页；滚动播报时则把播报拨回开头
+  const scrollerEl = $('scroller');
+  const isPageScroll = () => matchMedia('(max-width: 860px)').matches && !state.speed;
+  const scrolledY = () => isPageScroll() ? scrollY : scrollerEl.scrollTop;
+  const updateToTop = () => $('totop').classList.toggle('show', scrolledY() > 400);
+  scrollerEl.addEventListener('scroll', updateToTop, { passive: true });
+  addEventListener('scroll', updateToTop, { passive: true });
+  $('totop').addEventListener('click', () => {
+    if (state.speed) ticker.rewind();
+    else if (isPageScroll()) scrollTo({ top: 0, behavior: 'smooth' });
+    else scrollerEl.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
   const setFilters = open => document.body.classList.toggle('filters-open', open);
   $('tabbar').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return;
