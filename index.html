@@ -71,9 +71,26 @@
   .steps { list-style: none; margin: 14px 0 0; padding: 0; counter-reset: st; }
   .steps li { position: relative; padding: 0 0 14px 40px; font-size: 15px; line-height: 1.6; counter-increment: st; }
   .steps li::before { content: counter(st); position: absolute; left: 0; top: 1px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; }
-  .steps kbd { font: inherit; font-weight: 600; background: var(--surface-2); border-radius: 5px; padding: 1px 7px; white-space: nowrap; }
+  .steps kbd, .gcar kbd { font: inherit; font-weight: 600; background: var(--surface-2); border-radius: 5px; padding: 1px 7px; white-space: nowrap; }
   .steps svg { width: 18px; height: 18px; vertical-align: -4px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .install-note { margin: 4px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+  /* iPhone 图文教程：横向滑动的步骤卡片 */
+  .gcar { margin: 14px -20px 0; }
+  .gcar .track { list-style: none; margin: 0; padding: 0 20px; display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .gcar .track::-webkit-scrollbar { display: none; }
+  .gcar .card { flex: 0 0 min(100% - 44px, 320px); scroll-snap-align: center; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .gcar .txt { padding: 12px 14px 10px; display: grid; grid-template-columns: 26px 1fr; column-gap: 10px; align-items: start; min-height: 74px; }
+  .gcar .txt p { margin: 0; grid-column: 2; font-size: 14.5px; line-height: 1.55; }
+  .gcar .txt .note { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .gcar .num { grid-row: 1 / span 2; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 14px; display: grid; place-items: center; }
+  .gcar .card img { display: block; width: 100%; height: auto; aspect-ratio: 600 / 1304; border-top: 1px solid var(--line); background: var(--surface-2); }
+  .gcar .nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 12px; }
+  .gcar .nav .btn { width: 36px; padding: 0; font-size: 18px; border-radius: 50%; }
+  .gcar .dots { display: flex; gap: 6px; }
+  .gcar .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); cursor: pointer; }
+  .gcar .dots i.on { background: var(--accent); }
+  .gcar-tip { margin: 16px 0 0; padding: 12px 14px; background: var(--accent-soft); border-radius: 12px; font-size: 13.5px; line-height: 1.6; }
+  .gcar-tip b { color: var(--accent); }
   .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
   .dot.live { background: var(--ok); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent); animation: pulse 2s infinite; }
   .dot.busy { background: var(--accent); }
@@ -1204,15 +1221,47 @@
     const share = '<svg viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg>';
     const dots = '<svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';
     const li = html => { const n = el('li'); n.innerHTML = html; return n; };   // 只放自己写的静态文案
+    const IOS_STEPS = [
+      ['用 <kbd>Safari</kbd> 打开本页，点底部地址栏左侧的 <kbd>页面菜单</kbd> 按钮', '微信、Chrome 里没有这个功能；微信里先点右上角 ··· → 在 Safari 中打开'],
+      ['在弹出的菜单里点 <kbd>共享</kbd>', ''],
+      ['分享面板出来后，点 <kbd>查看更多</kbd>', ''],
+      ['找到并点 <kbd>添加到主屏幕</kbd>', ''],
+      ['名称保持「AI动态」，<kbd>作为网页 App 打开</kbd> 保持开启，点右上角 <kbd>添加</kbd>', ''],
+      ['桌面上出现 <kbd>AI动态</kbd> 图标，以后直接点它打开', '全屏显示、无地址栏，内容自动保持最新'],
+    ];
+    function iosCarousel() {
+      const cards = IOS_STEPS.map(([text, note], i) => {
+        const p = el('p'); p.innerHTML = text;                              // 只放自己写的静态文案
+        const pic = el('picture', null,
+          el('source', { srcset: `/guide/ios-${i + 1}.webp`, type: 'image/webp' }),
+          el('img', { src: `/guide/ios-${i + 1}.jpg`, alt: `第 ${i + 1} 步`, loading: i ? 'lazy' : 'eager', width: 600, height: 1304 }));
+        return el('li', { class: 'card' }, el('div', { class: 'txt' }, el('span', { class: 'num', text: i + 1 }), p, note ? el('p', { class: 'note', text: note }) : null), pic);
+      });
+      const track = el('ul', { class: 'track steps-track' }, ...cards);
+      const dots = el('div', { class: 'dots' }, ...cards.map((_, i) => { const d = el('i', { role: 'button', 'aria-label': `第 ${i + 1} 步` }); d.addEventListener('click', () => go(i)); return d; }));
+      const cur = () => Math.round(track.scrollLeft / (cards[0].offsetWidth + 12));
+      const go = i => cards[Math.max(0, Math.min(cards.length - 1, i))].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      const sync = () => [...dots.children].forEach((d, i) => d.classList.toggle('on', i === cur()));
+      track.addEventListener('scroll', sync, { passive: true });
+      const prev = el('button', { class: 'btn', 'aria-label': '上一步', text: '‹' }), next = el('button', { class: 'btn', 'aria-label': '下一步', text: '›' });
+      prev.addEventListener('click', () => go(cur() - 1)); next.addEventListener('click', () => go(cur() + 1));
+      requestAnimationFrame(sync);
+      return el('div', { class: 'gcar' }, track, el('div', { class: 'nav' }, prev, dots, next));
+    }
     function guideNodes() {
       const items = [];
       if (inWeChat) items.push(li(`微信里无法安装。先点右上角 ${dots} → <kbd>${isIOS ? '在 Safari 中打开' : '在浏览器打开'}</kbd>`));
       if (isIOS) {
-        items.push(li('确认是用 <kbd>Safari</kbd> 打开本页（其他浏览器没有这个选项）'));
-        items.push(li(`点底部工具栏中间的 <kbd>${share} 共享</kbd> 按钮（方框带向上箭头的图标）`));
-        items.push(li('往下找到并点 <kbd>添加到主屏幕</kbd>'));
-        items.push(li('点右上角 <kbd>添加</kbd>，桌面上就会出现「AI动态」图标'));
-      } else if (isMobile) {
+        // iPhone：真机截图的横滑教程（图在 /guide/），文字步骤只作为无图时的兜底
+        return [
+          el('h2', { text: '安装到 iPhone 桌面' }),
+          el('p', { class: 'install-note', text: '不用下载安装包，用 Safari 花 30 秒把「AI动态」放到桌面。左右滑动查看每一步。' }),
+          inWeChat ? el('ol', { class: 'steps' }, ...items) : null,
+          iosCarousel(),
+          el('div', { class: 'gcar-tip' }, el('b', { text: '旧版系统（iOS 18 及更早）' }), el('span', { text: '：底部工具栏中间有一个「分享」按钮（方框带向上箭头），点它直接进入第 3 步的分享面板。' })),
+        ];
+      }
+      if (isMobile) {
         items.push(li('建议用 <kbd>Chrome</kbd> 或 <kbd>Edge</kbd> 打开本页'));
         items.push(li(`点右上角 ${dots} 菜单`));
         items.push(li('选 <kbd>安装应用</kbd> 或 <kbd>添加到主屏幕</kbd>，再点确认'));
