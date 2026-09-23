@@ -143,13 +143,16 @@
   aside .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); position: sticky; top: calc(var(--header-h, 110px) + 16px); max-height: calc(100vh - var(--header-h, 110px) - 32px); overflow: auto; }
   @media (max-width: 860px) { aside .panel { position: static; max-height: 300px; } }
   /* 热点榜：强调色顶边 + 吸顶标题带，前三名放大，状态用一眼能懂的胶囊标签 */
-  aside .panel { padding: 0; border-top: 3px solid var(--accent); }
-  .hot-head { position: sticky; top: 0; z-index: 1; border-radius: 10px 10px 0 0; padding: 12px 16px 10px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, var(--accent-soft), var(--surface) 90%); }
+  aside .panel { padding: 0; border-top: 3px solid var(--accent); display: flex; flex-direction: column; overflow: hidden; }
+  ol.hot { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .hot-head, .site-stats { flex: none; }
+  .hot-head { border-radius: 10px 10px 0 0; padding: 12px 16px 10px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, var(--accent-soft), var(--surface) 90%); }
   .hot-head h3 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: .02em; display: flex; align-items: center; gap: 6px; }
   .hot-head h3 svg { width: 19px; height: 19px; fill: var(--accent); flex: none; }
   .hot-head h3 small { margin-left: auto; font-weight: 400; color: var(--muted); font-size: 12px; letter-spacing: 0; }
   .hot-head p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
-  .site-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 10px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+  .site-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 10px 16px; border-top: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: 12px; }
+  @media (max-width: 860px) { .site-stats { position: sticky; bottom: var(--bottom-h); border-radius: 0 0 12px 12px; } }
   .site-stats b { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
   .site-stats .live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: 5px; vertical-align: 1px; }
   ol.hot { list-style: none; margin: 0; padding: 0; }
@@ -326,9 +329,9 @@
 
     main { padding: 10px 12px calc(var(--bottom-h) + 12px); gap: 0; }
     body[data-view="feed"] main > aside, body[data-view="hot"] .feedcol { display: none; }
-    aside .panel { position: static; max-height: none; overflow: visible; }
+    aside .panel { position: static; max-height: none; overflow: visible; display: block; }
+    ol.hot { overflow: visible; }
     ol.hot li { font-size: 15px; padding: 12px 14px; }
-    .hot-head { position: static; }
     .scroller.on { height: calc(100vh - var(--header-h, 53px) - var(--bottom-h) - 20px); min-height: 240px; padding: 10px 0; }
     @supports (height: 100dvh) { .scroller.on { height: calc(100dvh - var(--header-h, 53px) - var(--bottom-h) - 20px); } }
     .card { padding: 12px 14px; }
@@ -1368,7 +1371,7 @@
     const render = s => {
       box.replaceChildren(
         el('span', { class: 'live' }, '在线 ', el('b', { text: fmt(s.online) })),
-        el('span', null, '今日 ', el('b', { text: fmt(s.today) }), ' 次访问'),
+        el('span', null, '今日 ', el('b', { text: fmt(s.today) }), ' 次访问 / ', el('b', { text: fmt(s.todayVisitors) }), ' 位访客'),
         el('span', null, '累计 ', el('b', { text: fmt(s.total) }), ' 次'),
       );
       box.hidden = false;
