@@ -1,0 +1,16 @@
+# 访问统计小服务。部署路径 /opt/ainews-stats；挂在 omni-api 的网络里，由同一个 Caddy 反代 /api/stats*
+services:
+  stats:
+    image: node:22-alpine
+    container_name: ainews-stats
+    restart: always
+    command: ["node", "/app/server.js"]
+    volumes:
+      - ./server.js:/app/server.js:ro
+      - ./data:/data
+    networks:
+      - omni
+networks:
+  omni:
+    external: true
+    name: omni-api_default

@@ -149,6 +149,9 @@
   .hot-head h3 svg { width: 19px; height: 19px; fill: var(--accent); flex: none; }
   .hot-head h3 small { margin-left: auto; font-weight: 400; color: var(--muted); font-size: 12px; letter-spacing: 0; }
   .hot-head p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+  .site-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 10px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+  .site-stats b { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .site-stats .live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: 5px; vertical-align: 1px; }
   ol.hot { list-style: none; margin: 0; padding: 0; }
   ol.hot li { display: grid; grid-template-columns: 30px 1fr; gap: 8px; padding: 11px 16px; border-top: 1px solid var(--line); font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
   ol.hot li:first-child { border-top: 0; }
@@ -434,6 +437,7 @@
         <p>过去 48 小时 · 多个信源共同印证的事件</p>
       </div>
       <ol class="hot" id="hot"><li><span></span><span style="color:var(--muted)">加载中…</span></li></ol>
+      <p class="site-stats" id="siteStats" hidden title="在线：最近 90 秒内打开着本页的人数；访问：同一访客 30 分钟内算一次。只用随机访客编号，不记录 IP 等个人信息"></p>
     </div>
   </aside>
 </main>
@@ -1352,6 +1356,36 @@
   }, 30000);
 
   refresh();
+
+  // ---------- 访问统计 ----------
+  // 每 30 秒向本站的统计接口发一次心跳（页面在后台时不发），返回在线人数和访问次数。本地文件方式打开时没有接口，跳过
+  const stats = (() => {
+    if (location.protocol !== 'https:') return;
+    let vid = store.get('vid', null);
+    if (!vid) { vid = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 12)); store.set('vid', vid); }
+    const box = $('siteStats');
+    const fmt = n => Number(n).toLocaleString('zh-CN');
+    const render = s => {
+      box.replaceChildren(
+        el('span', { class: 'live' }, '在线 ', el('b', { text: fmt(s.online) })),
+        el('span', null, '今日 ', el('b', { text: fmt(s.today) }), ' 次访问'),
+        el('span', null, '累计 ', el('b', { text: fmt(s.total) }), ' 次'),
+      );
+      box.hidden = false;
+    };
+    let failed = 0;
+    async function beat() {
+      if (document.hidden) return;
+      try {
+        const r = await fetch('/api/stats/beat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: vid }), cache: 'no-store' });
+        if (r.ok) { render(await r.json()); failed = 0; } else failed++;
+      } catch { failed++; }
+      if (failed >= 3) box.hidden = true;   // 统计服务不在时静默隐藏，不影响页面
+    }
+    setInterval(beat, 30000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) beat(); });
+    beat();
+  })();
 
   // 安装为手机应用（PWA）需要 Service Worker；本地文件直接打开时不注册
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
