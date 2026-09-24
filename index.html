@@ -139,6 +139,10 @@
   .reason { margin-top: 8px !important; padding-left: 10px; border-left: 2px solid var(--accent); font-size: 13.5px; color: var(--muted) !important; }
   .links { margin-top: 9px; display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
   .links a { border-bottom: 1px dotted currentColor; }
+  .links a[data-share] { margin-left: auto; }
+  .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(20px); z-index: 60; padding: 10px 18px; border-radius: 10px; background: var(--text); color: var(--bg); font-size: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.25); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: 90vw; text-align: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%); }
+  @media (max-width: 860px) { .toast { bottom: calc(var(--bottom-h) + 16px); } }
 
   aside .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); position: sticky; top: calc(var(--header-h, 110px) + 16px); max-height: calc(100vh - var(--header-h, 110px) - 32px); overflow: auto; }
   @media (max-width: 860px) { aside .panel { position: static; max-height: 300px; } }
@@ -490,6 +494,7 @@
     resets: null, resetsEtag: null,   // Tibo 重置 / 发卡日历的事件列表
     tibo: { month: null, sel: null }, // 日历卡片当前看的月份和选中的日期；null 表示跟随默认焦点
     readerOpen: false,
+    shared: new Map(),        // 通过分享链接取回的资讯（可能已不在当前列表里）
     storyCache: new Map(),   // publicId → 事件详情（含 etag），面板打开时按需拉取
     hotRank: new Map(),   // 条目 id → 当前热点榜名次，用来在资讯卡片上打「热点」标记
     more: 'idle', moreError: null,   // 「加载更多」的状态：idle / loading / error
@@ -909,6 +914,7 @@
       it.reason ? el('p', { class: 'reason', text: it.reason }) : null,
       el('div', { class: 'links' },
         links.original ? link(links.original, '原文 ↗') : null,
+        el('a', { href: '#share', 'data-share': it.id, text: '分享', title: '复制这条资讯的分享链接' }),
       ),
     );
   }
@@ -1159,8 +1165,9 @@
       ];
     }
 
-    async function openItem(id) {
-      const it = state.items.find(i => i.id === id); if (!it) return;
+    async function openItem(idOrItem) {
+      const it = typeof idOrItem === 'object' ? idOrItem : (state.items.find(i => i.id === idOrItem) || state.shared.get(idOrItem)); if (!it) return;
+      const id = it.id;
       const l = it.links || {}, rank = state.hotRank.get(id), pid = state.hotStory && state.hotStory.get(id);
       const my = ++token;
       const storyBox = pid ? el('div', { class: 'rd-sec' }, el('h3', { text: '热点事件' }), el('p', { class: 'rd-loading', text: '正在加载事件综述与报道时间线…' })) : null;
@@ -1176,7 +1183,7 @@
         el('div', { class: 'rd-meta' }, el('span', { text: (it.source && it.source.name) || '' }), el('span', { text: '· ' + fullTime(it.publishedAt) }), el('span', { text: '· ' + ago(it.publishedAt) })),
         it.summary ? section('AI 导读', el('p', { text: it.summary })) : null,
         it.reason ? section('推荐理由', el('p', { text: it.reason })) : null,
-        actions(primary(l.original, '查看原文 ↗')),
+        actions(primary(l.original, '查看原文 ↗'), el('button', { type: 'button', class: 'btn', 'data-share': id, text: '分享链接' })),
         el('p', { class: 'note', style: 'margin-top:14px', text: '导读与推荐理由由 AI 生成，引用数字、政策或原话前请以原文为准。' }),
         storyBox,
       ]);
@@ -1206,7 +1213,7 @@
     });
     $('rdClose').addEventListener('click', () => close());
     $('rdOverlay').addEventListener('click', () => close());
-    return { close, show: open };
+    return { close, show: open, openItem };
   })();
 
   // ---------- 安装到桌面 ----------
@@ -1359,6 +1366,46 @@
   }, 30000);
 
   refresh();
+
+  // ---------- 分享链接 ----------
+  // 分享时把这条资讯存到本站的短链服务，得到 https://…/s/xxxxxxxx；打开短链会回到本页并自动弹出这条资讯
+  const toast = (() => {
+    const t = el('div', { class: 'toast', role: 'status' }); document.body.append(t); let timer;
+    return msg => { t.textContent = msg; t.classList.add('show'); clearTimeout(timer); timer = setTimeout(() => t.classList.remove('show'), 2200); };
+  })();
+  async function shareItem(id, trigger) {
+    const it = state.items.find(i => i.id === id) || state.shared.get(id); if (!it) return;
+    if (location.protocol !== 'https:') { toast('本地打开的页面无法生成分享链接'); return; }
+    let url;
+    try {
+      const r = await fetch('/api/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(it) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      url = (await r.json()).url;
+    } catch (e) { toast('生成分享链接失败：' + e.message); return; }
+    // 手机上用系统分享面板（微信、短信…都在里面）；桌面端复制到剪贴板
+    if (navigator.share && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      try { await navigator.share({ title: it.title, text: it.title, url }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(url); toast('分享链接已复制：' + url); }
+    catch { prompt('复制这个链接：', url); }
+  }
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-share]'); if (!b) return;
+    e.preventDefault(); shareItem(b.dataset.share, b);
+  });
+  // 打开分享链接：/#s=xxxx → 取回这条资讯并弹出阅读面板
+  async function openSharedFromHash() {
+    const m = /^#s=([\w-]{4,16})$/.exec(location.hash); if (!m) return;
+    history.replaceState(null, '', location.pathname);
+    try {
+      const r = await fetch('/api/share/' + m[1]);
+      if (!r.ok) { toast(r.status === 404 ? '这个分享链接不存在或已过期' : '分享内容加载失败'); return; }
+      const it = await r.json();
+      state.shared.set(it.id, it);
+      reader.openItem(it);
+    } catch { toast('分享内容加载失败'); }
+  }
+  openSharedFromHash();
 
   // ---------- 访问统计 ----------
   // 每 30 秒向本站的统计接口发一次心跳（页面在后台时不发），返回在线人数和访问次数。本地文件方式打开时没有接口，跳过
